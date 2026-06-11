@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Generated types are tool-owned: regenerate from the committed
+      # openapi.json snapshot and fail if the checked-in output drifted.
+      - name: Generated types drift check
+        run: |
+          pnpm generate
+          git diff --exit-code src/generated/
+      - run: pnpm check-types
+      - run: pnpm build
+      - run: pnpm test
