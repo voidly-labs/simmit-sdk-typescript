@@ -8,12 +8,15 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ['20', '22']
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version-file: .nvmrc
+          node-version: ${{ matrix.node }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # Generated types are tool-owned: regenerate from the committed
@@ -22,6 +25,9 @@ jobs:
         run: |
           pnpm generate
           git diff --exit-code src/generated/
+      - run: pnpm format:check
       - run: pnpm check-types
       - run: pnpm build
+      # Package-shape checks: exports map + dual ESM/CJS types resolution.
+      - run: pnpm lint:package
       - run: pnpm test

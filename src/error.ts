@@ -88,7 +88,11 @@ export class APIError<
     body: object | undefined,
     message: string | undefined,
     headers: Headers | undefined
-  ): APIError<number | undefined, string | undefined, GenericMeta | null | undefined> {
+  ): APIError<
+    number | undefined,
+    string | undefined,
+    GenericMeta | null | undefined
+  > {
     if (!status || !headers) {
       return new APIConnectionError({
         message,
@@ -107,7 +111,12 @@ export class APIError<
         return new InsufficientCreditsError(402, body, message, headers)
       }
       if (code === 'insufficient_credits_liability') {
-        return new InsufficientCreditsLiabilityError(402, body, message, headers)
+        return new InsufficientCreditsLiabilityError(
+          402,
+          body,
+          message,
+          headers
+        )
       }
       return new BillingError(402, body, message, headers)
     }
@@ -325,7 +334,11 @@ export class ServiceUnavailableError extends InternalServerError {
 
 // ── No HTTP response ────────────────────────────────────────────────────────
 
-export class APIConnectionError extends APIError<undefined, undefined, undefined> {
+export class APIConnectionError extends APIError<
+  undefined,
+  undefined,
+  undefined
+> {
   constructor({
     message,
     cause
@@ -341,7 +354,11 @@ export class APIConnectionTimeoutError extends APIConnectionError {
   }
 }
 
-export class APIUserAbortError extends APIError<undefined, undefined, undefined> {
+export class APIUserAbortError extends APIError<
+  undefined,
+  undefined,
+  undefined
+> {
   constructor({ message }: { message?: string } = {}) {
     super(undefined, undefined, message ?? 'Request was aborted.', undefined)
   }
@@ -380,7 +397,11 @@ export class JobWaitTimeoutError extends SimmitError {
   readonly jobId: string
   readonly lastStatus: JobStatus
 
-  constructor(args: { jobId: string; lastStatus: JobStatus; message?: string }) {
+  constructor(args: {
+    jobId: string
+    lastStatus: JobStatus
+    message?: string
+  }) {
     super(
       args.message ??
         `Timed out waiting for job ${args.jobId} (last status: ${args.lastStatus}). ` +
