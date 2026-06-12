@@ -238,7 +238,7 @@ export interface paths {
                     content: {
                         "application/json": {
                             success: boolean;
-                            id: string | null;
+                            id: string;
                             runtime: {
                                 ceiling: {
                                     /** @description The runtime ceiling that applied to this run, in seconds. View the maximum at `GET /v1/simc/usage` under `limits.maxRuntimeSeconds`. */
