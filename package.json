@@ -9,9 +9,14 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     }
   },
   "files": [
@@ -26,13 +31,39 @@
     "build": "tsup",
     "check-types": "tsc --noEmit",
     "generate": "bash scripts/generate.sh",
-    "test": "vitest run"
+    "test": "vitest run",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint:package": "publint && attw --pack ."
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.3",
     "@types/node": "^22.10.0",
     "openapi-typescript": "^7.4.0",
+    "prettier": "^3.8.4",
+    "publint": "^0.3.21",
     "tsup": "^8.3.0",
     "typescript": "^5.7.0",
     "vitest": "^4.1.8"
+  },
+  "keywords": [
+    "simmit",
+    "simulationcraft",
+    "simc",
+    "wow",
+    "sdk",
+    "api-client"
+  ],
+  "author": "Voidly Labs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/voidly-labs/simmit-sdk-typescript.git"
+  },
+  "homepage": "https://github.com/voidly-labs/simmit-sdk-typescript",
+  "bugs": {
+    "url": "https://github.com/voidly-labs/simmit-sdk-typescript/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

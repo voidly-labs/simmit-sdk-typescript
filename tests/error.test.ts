@@ -78,8 +78,18 @@ describe('code subclass selection', () => {
     [409, 'idempotency_key_reuse', IdempotencyKeyReuseError, ConflictError],
     [409, 'result_not_ready', ResultNotReadyError, ConflictError],
     [409, 'job_not_cancellable', JobNotCancellableError, ConflictError],
-    [422, 'input_sanitized_rejected', InvalidProfileError, UnprocessableEntityError],
-    [422, 'result_unavailable', ResultUnavailableError, UnprocessableEntityError],
+    [
+      422,
+      'input_sanitized_rejected',
+      InvalidProfileError,
+      UnprocessableEntityError
+    ],
+    [
+      422,
+      'result_unavailable',
+      ResultUnavailableError,
+      UnprocessableEntityError
+    ],
     [429, 'max_active_jobs_exceeded', MaxActiveJobsError, RateLimitError],
     [429, 'rate_limit_exceeded', RateLimitError, APIError]
   ] as const)('%i %s', (status, code, cls, parent) => {
