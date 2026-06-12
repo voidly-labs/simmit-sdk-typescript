@@ -324,3 +324,104 @@ describe('timeout and abort', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('APIPromise rejection handling', () => {
+  it('does not leak an unhandled rejection when only withResponse() is consumed', async () => {
+    vi.useRealTimers()
+    const unhandled: unknown[] = []
+    const onUnhandled = (err: unknown) => unhandled.push(err)
+    process.on('unhandledRejection', onUnhandled)
+    try {
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValue(jsonResponse(400, { error: 'bad', code: 'missing_input', meta: null }))
+      const client = makeClient(fetchMock)
+      const promise = client._request({ method: 'GET', path: '/x' })
+      await expect(promise.withResponse()).rejects.toBeInstanceOf(BadRequestError)
+      // Give Node a macrotask boundary to emit unhandledRejection if the
+      // APIPromise instance itself rejected without a handler.
+      await new Promise(resolve => setTimeout(resolve, 20))
+      expect(unhandled).toEqual([])
+    } finally {
+      process.removeListener('unhandledRejection', onUnhandled)
+    }
+  })
+
+  it('supports catch/finally chaining through the lazy then()', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse(401, { error: 'no', code: 'invalid_token', meta: null }))
+    const client = makeClient(fetchMock)
+    let ranFinally = false
+    const caught = await settle(
+      client
+        ._request({ method: 'GET', path: '/x' })
+        .catch((err: unknown) => err)
+        .finally(() => {
+          ranFinally = true
+        })
+    )
+    expect(caught).toBeInstanceOf(AuthenticationError)
+    expect(ranFinally).toBe(true)
+  })
+})
+
+describe('body reads inside the per-attempt timeout', () => {
+  it('maps a stalled response body to APIConnectionTimeoutError', async () => {
+    const fetchMock = vi.fn().mockImplementation((_url: string, init: RequestInit) => {
+      const body = new ReadableStream({
+        start(streamController) {
+          init.signal?.addEventListener('abort', () =>
+            streamController.error(new DOMException('aborted', 'AbortError'))
+          )
+        }
+      })
+      return Promise.resolve(
+        new Response(body, { status: 200, headers: { 'content-type': 'application/json' } })
+      )
+    })
+    const client = makeClient(fetchMock, { timeout: 50 })
+    await expect(
+      settle(client._request({ method: 'GET', path: '/x' }, { maxRetries: 0 }))
+    ).rejects.toBeInstanceOf(APIConnectionTimeoutError)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('treats a malformed 2xx body as a retryable transport failure', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response('not json', { status: 200 }))
+      .mockResolvedValueOnce(jsonResponse(200, { ok: true }))
+    const client = makeClient(fetchMock)
+    expect(await settle(client._request({ method: 'GET', path: '/x' }))).toEqual({ ok: true })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('maps an exhausted malformed 2xx body to APIConnectionError with the parse cause', async () => {
+    const fetchMock = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response('not json', { status: 200 }))
+    )
+    const client = makeClient(fetchMock)
+    const err = await settle(client._request({ method: 'GET', path: '/x' })).then(
+      () => null,
+      (e: unknown) => e
+    )
+    expect(err).toBeInstanceOf(APIConnectionError)
+    expect((err as Error).cause).toBeInstanceOf(SyntaxError)
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('maps a non-JSON error body to the status class with no code', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response('<html>lb error</html>', { status: 400 }))
+    const client = makeClient(fetchMock)
+    const err = await settle(client._request({ method: 'GET', path: '/x' })).then(
+      () => null,
+      (e: unknown) => e
+    )
+    expect(err).toBeInstanceOf(BadRequestError)
+    expect((err as BadRequestError).code).toBeUndefined()
+    expect((err as Error).message).toBe('400 status code (no body)')
+  })
+})

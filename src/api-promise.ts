@@ -17,10 +17,22 @@ export class APIPromise<T> extends Promise<T> {
   readonly #parsed: Promise<{ data: T; response: Response }>
 
   constructor(parsed: Promise<{ data: T; response: Response }>) {
-    super((resolve, reject) => {
-      parsed.then(result => resolve(result.data), reject)
-    })
+    // The base promise is a pre-settled placeholder that is never observed:
+    // then() below delegates to #parsed lazily (catch/finally route through
+    // then() per spec). Subscribing eagerly here would reject this instance
+    // even when the caller only consumes withResponse(), leaking an
+    // unhandled rejection on failures.
+    super(resolve => resolve(undefined as never))
     this.#parsed = parsed
+  }
+
+  override then<TResult1 = T, TResult2 = never>(
+    onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null,
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
+  ): Promise<TResult1 | TResult2> {
+    return this.#parsed
+      .then(result => result.data)
+      .then(onfulfilled, onrejected)
   }
 
   withResponse(): Promise<{ data: T; response: Response }> {

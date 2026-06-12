@@ -55,9 +55,9 @@ async function run<T>(
   for (let attempt = 0; ; attempt++) {
     throwIfUserAborted(options.signal)
 
-    let response: Response
+    let result: AttemptResult
     try {
-      response = await fetchAttempt(config, spec, options, {
+      result = await fetchAttempt(config, spec, options, {
         url,
         headers,
         body,
@@ -65,7 +65,8 @@ async function run<T>(
       })
     } catch (err) {
       if (err instanceof APIUserAbortError) throw err
-      // Connection error or per-attempt timeout — retryable.
+      // Connection error, malformed success body, or per-attempt timeout —
+      // all retryable.
       if (attempt < maxRetries) {
         await backoff(attempt, undefined, options.signal)
         continue
@@ -73,8 +74,10 @@ async function run<T>(
       throw err
     }
 
+    const { response, json } = result
+
     if (response.ok) {
-      return { data: (await response.json()) as T, response }
+      return { data: json as T, response }
     }
 
     if (shouldRetryStatus(response.status) && attempt < maxRetries) {
@@ -84,11 +87,17 @@ async function run<T>(
 
     throw APIError.generate(
       response.status,
-      await parseErrorBody(response),
+      typeof json === 'object' && json !== null ? json : undefined,
       response.statusText,
       response.headers
     )
   }
+}
+
+interface AttemptResult {
+  response: Response
+  /** Parsed JSON body; undefined when an error response carried a non-JSON body. */
+  json: unknown
 }
 
 async function fetchAttempt(
@@ -101,20 +110,39 @@ async function fetchAttempt(
     body: string | undefined
     timeout: number
   }
-): Promise<Response> {
+): Promise<AttemptResult> {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), attempt.timeout)
   const onUserAbort = () => controller.abort()
   options.signal?.addEventListener('abort', onUserAbort, { once: true })
 
   try {
-    return await config.fetch(attempt.url, {
+    const response = await config.fetch(attempt.url, {
       ...config.fetchOptions,
       method: spec.method,
       headers: attempt.headers,
       ...(attempt.body !== undefined ? { body: attempt.body } : {}),
       signal: controller.signal
     })
+
+    // The body is read inside the timed scope too — a stalled body must not
+    // hang past the per-attempt timeout (fetch ties the body stream to the
+    // controller's signal, so the abort cancels the read).
+    let json: unknown
+    if (response.ok) {
+      // Success bodies must parse; a truncated/malformed one is treated as a
+      // transport failure (classified below) and retried like one.
+      json = await response.json()
+    } else {
+      try {
+        json = await response.json()
+      } catch (err) {
+        // Aborted mid-read is a timeout/abort, not a non-JSON body.
+        if (controller.signal.aborted) throw err
+        json = undefined // e.g. a load-balancer HTML error page
+      }
+    }
+    return { response, json }
   } catch (err) {
     if (options.signal?.aborted) throw new APIUserAbortError()
     if (controller.signal.aborted) {
@@ -220,13 +248,4 @@ function sleep(ms: number, signal: AbortSignal | undefined): Promise<void> {
 
 function throwIfUserAborted(signal: AbortSignal | undefined): void {
   if (signal?.aborted) throw new APIUserAbortError()
-}
-
-async function parseErrorBody(response: Response): Promise<object | undefined> {
-  try {
-    const parsed: unknown = await response.json()
-    return typeof parsed === 'object' && parsed !== null ? parsed : undefined
-  } catch {
-    return undefined
-  }
 }
