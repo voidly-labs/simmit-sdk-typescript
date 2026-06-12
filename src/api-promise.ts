@@ -22,7 +22,7 @@ export class APIPromise<T> extends Promise<T> {
     // then() per spec). Subscribing eagerly here would reject this instance
     // even when the caller only consumes withResponse(), leaking an
     // unhandled rejection on failures.
-    super(resolve => resolve(undefined as never))
+    super((resolve) => resolve(undefined as never))
     this.#parsed = parsed
   }
 
@@ -31,7 +31,7 @@ export class APIPromise<T> extends Promise<T> {
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
   ): Promise<TResult1 | TResult2> {
     return this.#parsed
-      .then(result => result.data)
+      .then((result) => result.data)
       .then(onfulfilled, onrejected)
   }
 
@@ -40,6 +40,6 @@ export class APIPromise<T> extends Promise<T> {
   }
 
   asResponse(): Promise<Response> {
-    return this.#parsed.then(result => result.response)
+    return this.#parsed.then((result) => result.response)
   }
 }

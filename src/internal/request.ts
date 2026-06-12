@@ -81,7 +81,11 @@ async function run<T>(
     }
 
     if (shouldRetryStatus(response.status) && attempt < maxRetries) {
-      await backoff(attempt, response.headers.get('retry-after'), options.signal)
+      await backoff(
+        attempt,
+        response.headers.get('retry-after'),
+        options.signal
+      )
       continue
     }
 

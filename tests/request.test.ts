@@ -12,7 +12,11 @@ import {
   SimmitError
 } from '../src/error'
 
-function jsonResponse(status: number, body: unknown, headers?: Record<string, string>) {
+function jsonResponse(
+  status: number,
+  body: unknown,
+  headers?: Record<string, string>
+) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { 'content-type': 'application/json', ...headers }
@@ -40,7 +44,7 @@ afterEach(() => {
 
 /** Runs a request to completion, advancing fake timers through backoff sleeps. */
 async function settle<T>(promise: Promise<T>): Promise<T> {
-  const guarded = promise.catch(err => ({ __err: err }) as const)
+  const guarded = promise.catch((err) => ({ __err: err }) as const)
   await vi.runAllTimersAsync()
   const result = await guarded
   if (result && typeof result === 'object' && '__err' in (result as object)) {
@@ -51,10 +55,15 @@ async function settle<T>(promise: Promise<T>): Promise<T> {
 
 describe('request basics', () => {
   it('sends bearer auth and parses JSON', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { purchased: 10 }))
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse(200, { purchased: 10 }))
     const client = makeClient(fetchMock)
     const data = await settle(
-      client._request<{ purchased: number }>({ method: 'GET', path: '/v1/simc/credits' })
+      client._request<{ purchased: number }>({
+        method: 'GET',
+        path: '/v1/simc/credits'
+      })
     )
     expect(data).toEqual({ purchased: 10 })
     const [url, init] = fetchMock.mock.calls[0]!
@@ -66,10 +75,14 @@ describe('request basics', () => {
   it('exposes the raw response via withResponse/asResponse', async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValue(jsonResponse(200, { ok: 1 }, { 'x-idempotent-replay': 'true' }))
+      .mockResolvedValue(
+        jsonResponse(200, { ok: 1 }, { 'x-idempotent-replay': 'true' })
+      )
     const client = makeClient(fetchMock)
     const { data, response } = await settle(
-      client._request<{ ok: number }>({ method: 'GET', path: '/x' }).withResponse()
+      client
+        ._request<{ ok: number }>({ method: 'GET', path: '/x' })
+        .withResponse()
     )
     expect(data).toEqual({ ok: 1 })
     expect(response.headers.get('x-idempotent-replay')).toBe('true')
@@ -98,7 +111,9 @@ describe('request basics', () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { ok: true }))
     vi.stubGlobal('fetch', fetchMock)
     try {
-      const data = await settle(client._request<{ ok: boolean }>({ method: 'GET', path: '/x' }))
+      const data = await settle(
+        client._request<{ ok: boolean }>({ method: 'GET', path: '/x' })
+      )
       expect(data).toEqual({ ok: true })
       expect(fetchMock).toHaveBeenCalledTimes(1)
     } finally {
@@ -133,8 +148,20 @@ describe('retry policy', () => {
   it('retries 429 and 5xx then succeeds', async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(jsonResponse(429, { error: 'slow down', code: 'rate_limit_exceeded', meta: { scope: 'developer' } }))
-      .mockResolvedValueOnce(jsonResponse(503, { error: 'maint', code: 'api_maintenance', meta: { retryAfterSeconds: 1 } }))
+      .mockResolvedValueOnce(
+        jsonResponse(429, {
+          error: 'slow down',
+          code: 'rate_limit_exceeded',
+          meta: { scope: 'developer' }
+        })
+      )
+      .mockResolvedValueOnce(
+        jsonResponse(503, {
+          error: 'maint',
+          code: 'api_maintenance',
+          meta: { retryAfterSeconds: 1 }
+        })
+      )
       .mockResolvedValueOnce(jsonResponse(200, { done: true }))
     const client = makeClient(fetchMock)
     const data = await settle(client._request({ method: 'GET', path: '/x' }))
@@ -144,26 +171,56 @@ describe('retry policy', () => {
 
   it('does not retry non-429 4xx', async () => {
     for (const [status, body, cls] of [
-      [400, { error: 'bad', code: 'missing_input', meta: null }, BadRequestError],
-      [401, { error: 'nope', code: 'invalid_token', meta: null }, AuthenticationError],
-      [409, { error: 'conflict', code: 'result_not_ready', meta: { status: 'running' } }, ConflictError]
+      [
+        400,
+        { error: 'bad', code: 'missing_input', meta: null },
+        BadRequestError
+      ],
+      [
+        401,
+        { error: 'nope', code: 'invalid_token', meta: null },
+        AuthenticationError
+      ],
+      [
+        409,
+        {
+          error: 'conflict',
+          code: 'result_not_ready',
+          meta: { status: 'running' }
+        },
+        ConflictError
+      ]
     ] as const) {
       const fetchMock = vi.fn().mockResolvedValue(jsonResponse(status, body))
       const client = makeClient(fetchMock)
-      await expect(settle(client._request({ method: 'GET', path: '/x' }))).rejects.toBeInstanceOf(cls)
+      await expect(
+        settle(client._request({ method: 'GET', path: '/x' }))
+      ).rejects.toBeInstanceOf(cls)
       expect(fetchMock).toHaveBeenCalledTimes(1)
     }
   })
 
   it('gives up after maxRetries and throws the mapped error', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(500, { error: 'boom', code: 'internal', meta: null }))
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse(500, { error: 'boom', code: 'internal', meta: null })
+      )
     const client = makeClient(fetchMock)
-    await expect(settle(client._request({ method: 'GET', path: '/x' }))).rejects.toBeInstanceOf(InternalServerError)
+    await expect(
+      settle(client._request({ method: 'GET', path: '/x' }))
+    ).rejects.toBeInstanceOf(InternalServerError)
     expect(fetchMock).toHaveBeenCalledTimes(3) // maxRetries 2 → 3 attempts
   })
 
   it('maxRetries: 0 disables retries', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(429, { error: 'x', code: 'rate_limit_exceeded', meta: { scope: 'developer' } }))
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse(429, {
+        error: 'x',
+        code: 'rate_limit_exceeded',
+        meta: { scope: 'developer' }
+      })
+    )
     const client = makeClient(fetchMock)
     await expect(
       settle(client._request({ method: 'GET', path: '/x' }, { maxRetries: 0 }))
@@ -174,9 +231,11 @@ describe('retry policy', () => {
   it('retries connection errors and maps exhaustion to APIConnectionError', async () => {
     const fetchMock = vi.fn().mockRejectedValue(new TypeError('fetch failed'))
     const client = makeClient(fetchMock)
-    const err = await settle(client._request({ method: 'GET', path: '/x' })).then(
+    const err = await settle(
+      client._request({ method: 'GET', path: '/x' })
+    ).then(
       () => null,
-      e => e
+      (e) => e
     )
     expect(err).toBeInstanceOf(APIConnectionError)
     expect((err as Error).cause).toBeInstanceOf(TypeError)
@@ -189,7 +248,9 @@ describe('retry policy', () => {
       .mockRejectedValueOnce(new TypeError('fetch failed'))
       .mockResolvedValueOnce(jsonResponse(200, { ok: true }))
     const client = makeClient(fetchMock)
-    expect(await settle(client._request({ method: 'GET', path: '/x' }))).toEqual({ ok: true })
+    expect(
+      await settle(client._request({ method: 'GET', path: '/x' }))
+    ).toEqual({ ok: true })
   })
 })
 
@@ -198,7 +259,15 @@ describe('backoff timing', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
-        jsonResponse(429, { error: 'x', code: 'rate_limit_exceeded', meta: { scope: 'developer' } }, { 'retry-after': '2' })
+        jsonResponse(
+          429,
+          {
+            error: 'x',
+            code: 'rate_limit_exceeded',
+            meta: { scope: 'developer' }
+          },
+          { 'retry-after': '2' }
+        )
       )
       .mockResolvedValueOnce(jsonResponse(200, {}))
     const client = makeClient(fetchMock)
@@ -215,7 +284,15 @@ describe('backoff timing', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
-        jsonResponse(429, { error: 'x', code: 'rate_limit_exceeded', meta: { scope: 'developer' } }, { 'retry-after': '120' })
+        jsonResponse(
+          429,
+          {
+            error: 'x',
+            code: 'rate_limit_exceeded',
+            meta: { scope: 'developer' }
+          },
+          { 'retry-after': '120' }
+        )
       )
       .mockResolvedValueOnce(jsonResponse(200, {}))
     const client = makeClient(fetchMock)
@@ -235,7 +312,11 @@ describe('backoff timing', () => {
       .mockResolvedValueOnce(
         jsonResponse(
           429,
-          { error: 'x', code: 'rate_limit_exceeded', meta: { scope: 'developer' } },
+          {
+            error: 'x',
+            code: 'rate_limit_exceeded',
+            meta: { scope: 'developer' }
+          },
           { 'retry-after': new Date(Date.now() + 5_000).toUTCString() }
         )
       )
@@ -251,13 +332,20 @@ describe('backoff timing', () => {
   })
 
   it('ignores past or unparseable HTTP-date Retry-After values', async () => {
-    for (const retryAfter of [new Date(Date.now() - 5_000).toUTCString(), 'not-a-date']) {
+    for (const retryAfter of [
+      new Date(Date.now() - 5_000).toUTCString(),
+      'not-a-date'
+    ]) {
       const fetchMock = vi
         .fn()
         .mockResolvedValueOnce(
           jsonResponse(
             429,
-            { error: 'x', code: 'rate_limit_exceeded', meta: { scope: 'developer' } },
+            {
+              error: 'x',
+              code: 'rate_limit_exceeded',
+              meta: { scope: 'developer' }
+            },
             { 'retry-after': retryAfter }
           )
         )
@@ -275,9 +363,13 @@ describe('backoff timing', () => {
   it('caps computed backoff at 8s', async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValue(jsonResponse(500, { error: 'x', code: 'internal', meta: null }))
+      .mockResolvedValue(
+        jsonResponse(500, { error: 'x', code: 'internal', meta: null })
+      )
     const client = makeClient(fetchMock, { maxRetries: 6 })
-    const rejected = expect(settle(client._request({ method: 'GET', path: '/x' }))).rejects.toBeInstanceOf(InternalServerError)
+    const rejected = expect(
+      settle(client._request({ method: 'GET', path: '/x' }))
+    ).rejects.toBeInstanceOf(InternalServerError)
     await rejected
     // 7 attempts: 500, 1000, 2000, 4000, 8000, 8000 (capped) sleeps in between.
     expect(fetchMock).toHaveBeenCalledTimes(7)
@@ -288,10 +380,19 @@ describe('idempotency keys', () => {
   it('auto-generates one key per call and reuses it across retries', async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(jsonResponse(500, { error: 'x', code: 'internal', meta: null }))
+      .mockResolvedValueOnce(
+        jsonResponse(500, { error: 'x', code: 'internal', meta: null })
+      )
       .mockResolvedValueOnce(jsonResponse(200, { id: 'job' }))
     const client = makeClient(fetchMock)
-    await settle(client._request({ method: 'POST', path: '/v1/simc/jobs', body: {}, idempotent: true }))
+    await settle(
+      client._request({
+        method: 'POST',
+        path: '/v1/simc/jobs',
+        body: {},
+        idempotent: true
+      })
+    )
 
     const first = fetchMock.mock.calls[0]![1].headers['idempotency-key']
     const second = fetchMock.mock.calls[1]![1].headers['idempotency-key']
@@ -308,7 +409,9 @@ describe('idempotency keys', () => {
         { idempotencyKey: 'my-key' }
       )
     )
-    expect(fetchMock.mock.calls[0]![1].headers['idempotency-key']).toBe('my-key')
+    expect(fetchMock.mock.calls[0]![1].headers['idempotency-key']).toBe(
+      'my-key'
+    )
   })
 
   it('applies a per-request key over a defaultHeaders idempotency-key', async () => {
@@ -322,7 +425,9 @@ describe('idempotency keys', () => {
         { idempotencyKey: 'per-call' }
       )
     )
-    expect(fetchMock.mock.calls[0]![1].headers['idempotency-key']).toBe('per-call')
+    expect(fetchMock.mock.calls[0]![1].headers['idempotency-key']).toBe(
+      'per-call'
+    )
   })
 
   it('lets defaultHeaders override the auto-generated fallback key', async () => {
@@ -331,9 +436,16 @@ describe('idempotency keys', () => {
       defaultHeaders: { 'idempotency-key': 'constructor-pinned' }
     })
     await settle(
-      client._request({ method: 'POST', path: '/v1/simc/jobs', body: {}, idempotent: true })
+      client._request({
+        method: 'POST',
+        path: '/v1/simc/jobs',
+        body: {},
+        idempotent: true
+      })
     )
-    expect(fetchMock.mock.calls[0]![1].headers['idempotency-key']).toBe('constructor-pinned')
+    expect(fetchMock.mock.calls[0]![1].headers['idempotency-key']).toBe(
+      'constructor-pinned'
+    )
   })
 
   it('adds no key to plain requests', async () => {
@@ -368,9 +480,9 @@ describe('timeout and abort', () => {
   it('retries timeouts until exhausted', async () => {
     const fetchMock = hangingFetch()
     const client = makeClient(fetchMock, { timeout: 50, maxRetries: 2 })
-    await expect(settle(client._request({ method: 'GET', path: '/x' }))).rejects.toBeInstanceOf(
-      APIConnectionTimeoutError
-    )
+    await expect(
+      settle(client._request({ method: 'GET', path: '/x' }))
+    ).rejects.toBeInstanceOf(APIConnectionTimeoutError)
     expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 
@@ -378,10 +490,13 @@ describe('timeout and abort', () => {
     const fetchMock = hangingFetch()
     const client = makeClient(fetchMock)
     const controller = new AbortController()
-    const promise = client._request({ method: 'GET', path: '/x' }, { signal: controller.signal })
+    const promise = client._request(
+      { method: 'GET', path: '/x' },
+      { signal: controller.signal }
+    )
     const outcome = promise.then(
       () => null,
-      e => e
+      (e) => e
     )
     controller.abort()
     await vi.runAllTimersAsync()
@@ -392,13 +507,18 @@ describe('timeout and abort', () => {
   it('aborts backoff sleeps too', async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValue(jsonResponse(500, { error: 'x', code: 'internal', meta: null }))
+      .mockResolvedValue(
+        jsonResponse(500, { error: 'x', code: 'internal', meta: null })
+      )
     const client = makeClient(fetchMock)
     const controller = new AbortController()
-    const promise = client._request({ method: 'GET', path: '/x' }, { signal: controller.signal })
+    const promise = client._request(
+      { method: 'GET', path: '/x' },
+      { signal: controller.signal }
+    )
     const outcome = promise.then(
       () => null,
-      e => e
+      (e) => e
     )
     // Let the first attempt fail and the backoff sleep start, then abort mid-sleep.
     await vi.advanceTimersByTimeAsync(100)
@@ -418,13 +538,17 @@ describe('APIPromise rejection handling', () => {
     try {
       const fetchMock = vi
         .fn()
-        .mockResolvedValue(jsonResponse(400, { error: 'bad', code: 'missing_input', meta: null }))
+        .mockResolvedValue(
+          jsonResponse(400, { error: 'bad', code: 'missing_input', meta: null })
+        )
       const client = makeClient(fetchMock)
       const promise = client._request({ method: 'GET', path: '/x' })
-      await expect(promise.withResponse()).rejects.toBeInstanceOf(BadRequestError)
+      await expect(promise.withResponse()).rejects.toBeInstanceOf(
+        BadRequestError
+      )
       // Give Node a macrotask boundary to emit unhandledRejection if the
       // APIPromise instance itself rejected without a handler.
-      await new Promise(resolve => setTimeout(resolve, 20))
+      await new Promise((resolve) => setTimeout(resolve, 20))
       expect(unhandled).toEqual([])
     } finally {
       process.removeListener('unhandledRejection', onUnhandled)
@@ -434,7 +558,9 @@ describe('APIPromise rejection handling', () => {
   it('supports catch/finally chaining through the lazy then()', async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValue(jsonResponse(401, { error: 'no', code: 'invalid_token', meta: null }))
+      .mockResolvedValue(
+        jsonResponse(401, { error: 'no', code: 'invalid_token', meta: null })
+      )
     const client = makeClient(fetchMock)
     let ranFinally = false
     const caught = await settle(
@@ -462,7 +588,10 @@ describe('body reads inside the per-attempt timeout', () => {
         }
       })
       return Promise.resolve(
-        new Response(body, { status: 200, headers: { 'content-type': 'application/json' } })
+        new Response(body, {
+          status: 200,
+          headers: { 'content-type': 'application/json' }
+        })
       )
     })
   }
@@ -480,7 +609,10 @@ describe('body reads inside the per-attempt timeout', () => {
     const fetchMock = stalledBodyFetch()
     const client = makeClient(fetchMock)
     const controller = new AbortController()
-    const promise = client._request({ method: 'GET', path: '/x' }, { signal: controller.signal })
+    const promise = client._request(
+      { method: 'GET', path: '/x' },
+      { signal: controller.signal }
+    )
     const outcome = promise.then(
       () => null,
       (e: unknown) => e
@@ -499,16 +631,22 @@ describe('body reads inside the per-attempt timeout', () => {
       .mockResolvedValueOnce(new Response('not json', { status: 200 }))
       .mockResolvedValueOnce(jsonResponse(200, { ok: true }))
     const client = makeClient(fetchMock)
-    expect(await settle(client._request({ method: 'GET', path: '/x' }))).toEqual({ ok: true })
+    expect(
+      await settle(client._request({ method: 'GET', path: '/x' }))
+    ).toEqual({ ok: true })
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it('maps an exhausted malformed 2xx body to APIConnectionError with the parse cause', async () => {
-    const fetchMock = vi.fn().mockImplementation(() =>
-      Promise.resolve(new Response('not json', { status: 200 }))
-    )
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve(new Response('not json', { status: 200 }))
+      )
     const client = makeClient(fetchMock)
-    const err = await settle(client._request({ method: 'GET', path: '/x' })).then(
+    const err = await settle(
+      client._request({ method: 'GET', path: '/x' })
+    ).then(
       () => null,
       (e: unknown) => e
     )
@@ -522,7 +660,9 @@ describe('body reads inside the per-attempt timeout', () => {
       .fn()
       .mockResolvedValue(new Response('<html>lb error</html>', { status: 400 }))
     const client = makeClient(fetchMock)
-    const err = await settle(client._request({ method: 'GET', path: '/x' })).then(
+    const err = await settle(
+      client._request({ method: 'GET', path: '/x' })
+    ).then(
       () => null,
       (e: unknown) => e
     )
