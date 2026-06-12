@@ -63,7 +63,8 @@ Publishing: tsup → `dist/`, `exports` map (ESM+CJS+`.d.ts`), `engines.node: ">
 
 ```ts
 export default class Simmit {
-  readonly jobs: Jobs; readonly credits: Credits
+  readonly jobs: Jobs
+  readonly credits: Credits
   constructor(options?: ClientOptions)
 }
 
@@ -130,10 +131,16 @@ compose — first to fire aborts (timeout → `APIConnectionTimeoutError`, retry
 
 ```ts
 export class Jobs {
-  create(params: JobCreateParams, options?: RequestOptions): APIPromise<JobCreateResponse>
+  create(
+    params: JobCreateParams,
+    options?: RequestOptions
+  ): APIPromise<JobCreateResponse>
   get(jobId: string, options?: RequestOptions): APIPromise<Job>
   getResult(jobId: string, options?: RequestOptions): APIPromise<JobResult>
-  createAndWait(params: JobCreateParams, options?: JobWaitOptions): Promise<CompletedJob>
+  createAndWait(
+    params: JobCreateParams,
+    options?: JobWaitOptions
+  ): Promise<CompletedJob>
   cancel(jobId: string, options?: RequestOptions): APIPromise<JobCancelResponse>
 }
 
@@ -199,16 +206,24 @@ consume an unverified payload. (Overrides review §E's sync `boolean`.)
 /** Verifies X-Simmit-Signature ("t=<unix>,v1=<hex>", HMAC-SHA256 over `${t}.${rawBody}`,
  *  timing-safe, tolerance 300s). Throws WebhookVerificationError on bad signature/header/age. */
 export function unwrapWebhook(
-  rawBody: string,           // request body exactly as received — do not re-serialize
-  signatureHeader: string,   // the X-Simmit-Signature header value
-  secret: string,            // webhook signing secret (dashboard → Clients & Keys → Webhook)
+  rawBody: string, // request body exactly as received — do not re-serialize
+  signatureHeader: string, // the X-Simmit-Signature header value
+  secret: string, // webhook signing secret (dashboard → Clients & Keys → Webhook)
   options?: { toleranceSeconds?: number }
 ): Promise<WebhookEvent>
 
 export interface WebhookEvent {
-  kind: 'job.terminal'; version: 'v1'; timestamp: string
-  payload: { id: string; statusReason: string | null
-             status: Extract<JobStatus, 'completed' | 'failed' | 'cancelled' | 'timed_out'> }
+  kind: 'job.terminal'
+  version: 'v1'
+  timestamp: string
+  payload: {
+    id: string
+    statusReason: string | null
+    status: Extract<
+      JobStatus,
+      'completed' | 'failed' | 'cancelled' | 'timed_out'
+    >
+  }
 }
 ```
 
@@ -316,7 +331,7 @@ scope; hand-rolled calls surface it as base `APIError`.
 
 - **Retryable:** HTTP 408 (defensive; not in spec), 429, all 5xx, connection errors, per-attempt
   timeouts. **Not retryable:** every other 4xx — including 409, owning the exception:
-  `result_not_ready` *is* transient, but `jobs.getResult` on a non-terminal job throws a typed
+  `result_not_ready` _is_ transient, but `jobs.getResult` on a non-terminal job throws a typed
   `ResultNotReadyError` immediately by design (poll `/status`, not `/result`); `createAndWait`
   polls `/status` so it structurally never hits it; the other 409s are deterministic.
 - **Attempts:** `maxRetries` default 2 → at most 3 attempts. `maxRetries: 0` disables retries.
@@ -324,7 +339,7 @@ scope; hand-rolled calls surface it as base `APIError`.
   (Stainless formula). **`Retry-After` position:** honored only when it parses (seconds or
   HTTP-date) to a delay in (0, 60s]; otherwise ignored in favor of computed backoff — the SDK
   never sleeps arbitrarily long on a server hint. No special path for `api_maintenance` (§5).
-- **Abort:** the caller's `signal` cancels in-flight attempts *and* backoff sleeps.
+- **Abort:** the caller's `signal` cancels in-flight attempts _and_ backoff sleeps.
 - **Idempotency keys:** `jobs.create`/`jobs.createAndWait` auto-generate
   `idempotency-key: simmit-node-retry-<crypto.randomUUID()>` when `options.idempotencyKey` is
   absent — generated once per call, reused across retry attempts: that is what makes POST retries
@@ -344,7 +359,7 @@ the full record → return or throw.
   (Queue-estimate-aware pacing via `queue.estimatedStartSeconds` is v1.x.)
 - **Wait deadline:** `maxRuntimeSeconds` defaults to 300s, but account ceilings vary and are not
   publicly bounded, plus up to `maxQueueSeconds` (default 1800s) queued — a static default would
-  be wrong for someone. The create response returns the *applied* ceilings, so the default is
+  be wrong for someone. The create response returns the _applied_ ceilings, so the default is
   per-job: `(runtime.ceiling.queueSeconds + runtime.ceiling.runtimeSeconds) × 1000 + 60_000`
   grace, falling back to 45 minutes if the ceilings are null. `waitTimeoutMs` overrides; no hard max.
 - **Returns:** `CompletedJob` (`Job & { status: 'completed' }`) — typed so the success path needs
@@ -392,7 +407,7 @@ the full record → return or throw.
 10. **`text/plain` ingress is docs-only — keep it that way deliberately:** declare it curl-only
     documentation. Do not spec a second ingress contract the generated-types seam cannot see.
 11. **Enumerate the real 402 codes** — `insufficient_credits | inactive_entitlement |
-    insufficient_credits_liability` — type its `priorityFeeCredits` meta (docs-prose only
+insufficient_credits_liability` — type its `priorityFeeCredits` meta (docs-prose only
     today), and add `webhook_not_configured` to the 400 enum.
 12. **Idempotency contract lives only in docs prose** (digest excludes `metadata`; API key +
     endpoint scope; no TTL). Fold it into the spec's `idempotency-key` parameter description.
@@ -433,11 +448,13 @@ now; §1 assumes the scope is ours.
 ## CHANGELOG
 
 rev 2 → rev 2.1 (simhammer live-consumer audit):
+
 - §8.3 (`error`→`message`) dropped as an SDK requirement — simhammer displays `.error`; rename
   only ever additive + coordinated. §8.5 split: `id` non-null stays pre-SDK (zero wire change);
   `success` removal deferred (hard-breaks simhammer). SDK never requires API behavior changes.
 
 rev 1 → rev 2:
+
 - Surface: `jobs.cancel` promoted (spec's discriminated `JobCancelResponse`, not review §E's
   `Job`); async `unwrapWebhook` + `WebhookEvent` on WebCrypto (not §E's sync `boolean`);
   methods return `APIPromise<T>`; `JobWaitOptions` gains `onPoll`.
