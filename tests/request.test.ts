@@ -227,6 +227,51 @@ describe('backoff timing', () => {
     expect(await settled).toBe(2)
   })
 
+  it('honors an HTTP-date Retry-After within the window', async () => {
+    // Whole-second epoch so toUTCString() round-trips the 5s delay exactly.
+    vi.setSystemTime(1_760_000_000_000)
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse(
+          429,
+          { error: 'x', code: 'rate_limit_exceeded', meta: { scope: 'developer' } },
+          { 'retry-after': new Date(Date.now() + 5_000).toUTCString() }
+        )
+      )
+      .mockResolvedValueOnce(jsonResponse(200, {}))
+    const client = makeClient(fetchMock)
+    const promise = client._request({ method: 'GET', path: '/x' })
+    const settled = promise.then(() => fetchMock.mock.calls.length)
+
+    await vi.advanceTimersByTimeAsync(4_999)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(await settled).toBe(2)
+  })
+
+  it('ignores past or unparseable HTTP-date Retry-After values', async () => {
+    for (const retryAfter of [new Date(Date.now() - 5_000).toUTCString(), 'not-a-date']) {
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(
+          jsonResponse(
+            429,
+            { error: 'x', code: 'rate_limit_exceeded', meta: { scope: 'developer' } },
+            { 'retry-after': retryAfter }
+          )
+        )
+        .mockResolvedValueOnce(jsonResponse(200, {}))
+      const client = makeClient(fetchMock)
+      const promise = client._request({ method: 'GET', path: '/x' })
+      const settled = promise.then(() => fetchMock.mock.calls.length)
+
+      // Computed backoff for attempt 0 with jitter factor 1.0 is exactly 500ms.
+      await vi.advanceTimersByTimeAsync(500)
+      expect(await settled).toBe(2)
+    }
+  })
+
   it('caps computed backoff at 8s', async () => {
     const fetchMock = vi
       .fn()
