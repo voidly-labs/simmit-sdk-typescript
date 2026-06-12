@@ -162,18 +162,27 @@ function buildHeaders(
   spec: RequestSpec,
   options: RequestOptions
 ): Record<string, string> {
+  const idempotent = spec.idempotent && spec.method === 'POST'
   const merged: Record<string, string | null | undefined> = {
     authorization: `Bearer ${config.secretKey}`,
     ...(spec.body !== undefined ? { 'content-type': 'application/json' } : {}),
-    ...(spec.idempotent && spec.method === 'POST'
+    ...(idempotent && !options.idempotencyKey
       ? {
           // Generated once per call and reused across retry attempts — that
-          // is what makes POST retries safe by default (DESIGN §6).
-          'idempotency-key':
-            options.idempotencyKey ?? `simmit-node-retry-${crypto.randomUUID()}`
+          // is what makes POST retries safe by default (DESIGN §6). The auto
+          // key is an SDK built-in default (lowest tier), so defaultHeaders
+          // may override it.
+          'idempotency-key': `simmit-node-retry-${crypto.randomUUID()}`
         }
       : {}),
     ...lowercaseKeys(config.defaultHeaders),
+    ...(idempotent && options.idempotencyKey
+      ? {
+          // An explicit key is a per-request option: it must beat constructor
+          // defaultHeaders (DESIGN §3). Raw options.headers still wins last.
+          'idempotency-key': options.idempotencyKey
+        }
+      : {}),
     ...lowercaseKeys(options.headers)
   }
 

@@ -252,6 +252,31 @@ describe('idempotency keys', () => {
     expect(fetchMock.mock.calls[0]![1].headers['idempotency-key']).toBe('my-key')
   })
 
+  it('applies a per-request key over a defaultHeaders idempotency-key', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, {}))
+    const client = makeClient(fetchMock, {
+      defaultHeaders: { 'idempotency-key': 'constructor-pinned' }
+    })
+    await settle(
+      client._request(
+        { method: 'POST', path: '/v1/simc/jobs', body: {}, idempotent: true },
+        { idempotencyKey: 'per-call' }
+      )
+    )
+    expect(fetchMock.mock.calls[0]![1].headers['idempotency-key']).toBe('per-call')
+  })
+
+  it('lets defaultHeaders override the auto-generated fallback key', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, {}))
+    const client = makeClient(fetchMock, {
+      defaultHeaders: { 'idempotency-key': 'constructor-pinned' }
+    })
+    await settle(
+      client._request({ method: 'POST', path: '/v1/simc/jobs', body: {}, idempotent: true })
+    )
+    expect(fetchMock.mock.calls[0]![1].headers['idempotency-key']).toBe('constructor-pinned')
+  })
+
   it('adds no key to plain requests', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, {}))
     const client = makeClient(fetchMock)
