@@ -451,8 +451,9 @@ describe('APIPromise rejection handling', () => {
 })
 
 describe('body reads inside the per-attempt timeout', () => {
-  it('maps a stalled response body to APIConnectionTimeoutError', async () => {
-    const fetchMock = vi.fn().mockImplementation((_url: string, init: RequestInit) => {
+  /** fetch that returns 200 headers immediately but whose body stream stalls until aborted. */
+  function stalledBodyFetch() {
+    return vi.fn().mockImplementation((_url: string, init: RequestInit) => {
       const body = new ReadableStream({
         start(streamController) {
           init.signal?.addEventListener('abort', () =>
@@ -464,10 +465,31 @@ describe('body reads inside the per-attempt timeout', () => {
         new Response(body, { status: 200, headers: { 'content-type': 'application/json' } })
       )
     })
+  }
+
+  it('maps a stalled response body to APIConnectionTimeoutError', async () => {
+    const fetchMock = stalledBodyFetch()
     const client = makeClient(fetchMock, { timeout: 50 })
     await expect(
       settle(client._request({ method: 'GET', path: '/x' }, { maxRetries: 0 }))
     ).rejects.toBeInstanceOf(APIConnectionTimeoutError)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('maps a user abort during a body read to APIUserAbortError', async () => {
+    const fetchMock = stalledBodyFetch()
+    const client = makeClient(fetchMock)
+    const controller = new AbortController()
+    const promise = client._request({ method: 'GET', path: '/x' }, { signal: controller.signal })
+    const outcome = promise.then(
+      () => null,
+      (e: unknown) => e
+    )
+    // Let headers arrive and the body read start, then abort mid-read.
+    await vi.advanceTimersByTimeAsync(100)
+    controller.abort()
+    await vi.runAllTimersAsync()
+    expect(await outcome).toBeInstanceOf(APIUserAbortError)
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
