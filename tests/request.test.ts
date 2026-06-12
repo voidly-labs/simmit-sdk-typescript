@@ -92,6 +92,20 @@ describe('request basics', () => {
     expect('x-gone' in headers).toBe(false)
   })
 
+  it('resolves the default fetch from globalThis lazily', async () => {
+    // Construct before stubbing: a snapshot taken here would miss the stub.
+    const client = new Simmit({ secretKey: 'smt_sk_test' })
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { ok: true }))
+    vi.stubGlobal('fetch', fetchMock)
+    try {
+      const data = await settle(client._request<{ ok: boolean }>({ method: 'GET', path: '/x' }))
+      expect(data).toEqual({ ok: true })
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('throws at construction without a secret key', () => {
     const previous = process.env.SIMMIT_SECRET_KEY
     delete process.env.SIMMIT_SECRET_KEY

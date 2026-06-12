@@ -61,7 +61,9 @@ export default class Simmit {
       timeout: options.timeout ?? 60_000,
       maxRetries: options.maxRetries ?? 2,
       defaultHeaders: options.defaultHeaders,
-      fetch: options.fetch ?? globalThis.fetch,
+      // Resolved lazily so a fetch patched onto globalThis after the client
+      // is constructed (msw, APM instrumentation) is still honored.
+      fetch: options.fetch ?? ((...args) => globalThis.fetch(...args)),
       fetchOptions: options.fetchOptions
     }
   }
