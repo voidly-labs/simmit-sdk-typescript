@@ -5,6 +5,8 @@ import {
   type ClientConfig,
   type RequestSpec
 } from './internal/request'
+import { Credits } from './resources/credits'
+import { Jobs } from './resources/jobs'
 
 export interface ClientOptions {
   /** Defaults to process.env['SIMMIT_SECRET_KEY'] — exactly one env fallback. Construction
@@ -40,6 +42,9 @@ export interface RequestOptions {
 }
 
 export default class Simmit {
+  readonly jobs: Jobs
+  readonly credits: Credits
+
   readonly baseURL: string
 
   readonly #config: ClientConfig
@@ -66,6 +71,9 @@ export default class Simmit {
       fetch: options.fetch ?? ((...args) => globalThis.fetch(...args)),
       fetchOptions: options.fetchOptions
     }
+
+    this.jobs = new Jobs(this)
+    this.credits = new Credits(this)
   }
 
   /** @internal Resource classes route through here; not public surface. */
