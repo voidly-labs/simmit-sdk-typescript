@@ -8,3 +8,6 @@ export type * from './api-types'
 // exported as types only so callers can annotate without constructing them.
 export type { Jobs, JobWaitOptions } from './resources/jobs'
 export type { Credits } from './resources/credits'
+// Standalone webhook verification — no client (and no secret key) required.
+export { unwrapWebhook } from './webhook'
+export type { WebhookEvent } from './webhook'
