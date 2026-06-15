@@ -37,6 +37,18 @@ export async function unwrapWebhook(
   secret: string,
   options?: { toleranceSeconds?: number }
 ): Promise<WebhookEvent> {
+  // An empty secret would otherwise surface as an opaque WebCrypto DataError;
+  // a NaN tolerance would make the age check pass for everything.
+  if (!secret) {
+    throw new WebhookVerificationError('Webhook signing secret is empty.')
+  }
+  const tolerance = options?.toleranceSeconds ?? DEFAULT_TOLERANCE_SECONDS
+  if (!Number.isFinite(tolerance) || tolerance < 0) {
+    throw new WebhookVerificationError(
+      'toleranceSeconds must be a non-negative number.'
+    )
+  }
+
   const { timestampRaw, timestamp, signature } =
     parseSignatureHeader(signatureHeader)
 
@@ -45,8 +57,8 @@ export async function unwrapWebhook(
     throw new WebhookVerificationError('Webhook signature does not match.')
   }
 
-  const tolerance = options?.toleranceSeconds ?? DEFAULT_TOLERANCE_SECONDS
-  if (Math.abs(Date.now() / 1000 - timestamp) > tolerance) {
+  // Compare on whole seconds, matching the header's unix-seconds `t`.
+  if (Math.abs(Math.floor(Date.now() / 1000) - timestamp) > tolerance) {
     throw new WebhookVerificationError(
       'Webhook timestamp is outside the tolerance window.'
     )
@@ -75,15 +87,16 @@ function parseSignatureHeader(header: string): {
     else if (key === 'v1') signature = value
   }
 
-  const timestamp = Number(timestampRaw)
-  if (!timestampRaw || !signature || !Number.isFinite(timestamp)) {
+  // `t` is unix whole seconds; reject anything but digits so the accepted
+  // header matches the documented contract.
+  if (!timestampRaw || !signature || !/^\d+$/.test(timestampRaw)) {
     throw new WebhookVerificationError(
       'Malformed signature header; expected "t=<unix>,v1=<hex>".'
     )
   }
   // The signed payload uses the timestamp exactly as sent, so keep the raw
   // string for signing and the parsed number only for the tolerance check.
-  return { timestampRaw, timestamp, signature }
+  return { timestampRaw, timestamp: Number(timestampRaw), signature }
 }
 
 async function hmacSha256Hex(secret: string, payload: string): Promise<string> {
