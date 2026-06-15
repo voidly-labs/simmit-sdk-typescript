@@ -22,11 +22,12 @@ import {
   DEFAULT_POLL_INTERVAL_MS,
   deriveWaitTimeoutMs,
   isTerminal,
+  MIN_POLL_INTERVAL_MS,
   nextPollInterval
 } from '../internal/poll'
 
 export interface JobWaitOptions extends RequestOptions {
-  /** Initial delay between status polls, ms. Grows ×1.5 per poll to a 10s cap. Default 1_000. */
+  /** Initial delay between status polls, ms. Grows ×1.5 per poll to a 10s cap; values under 100 are raised to it. Default 1_000. */
   pollIntervalMs?: number
   /** Overall wait deadline, ms. Default derived from the job's applied ceilings. */
   waitTimeoutMs?: number
@@ -115,7 +116,12 @@ export class Jobs {
     const deadline =
       Date.now() + (waitTimeoutMs ?? deriveWaitTimeoutMs(created))
     const statusPath = `/v1/simc/jobs/${encodeURIComponent(created.id)}/status`
-    let interval = pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS
+    // nextPollInterval only ever grows the interval, so a non-positive seed
+    // would hot-poll the status endpoint; floor it.
+    let interval = Math.max(
+      pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS,
+      MIN_POLL_INTERVAL_MS
+    )
     let lastStatus: JobStatus = 'pending'
 
     for (;;) {

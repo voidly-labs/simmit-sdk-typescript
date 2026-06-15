@@ -11,6 +11,7 @@ import {
   deriveWaitTimeoutMs,
   isTerminal,
   MAX_POLL_INTERVAL_MS,
+  MIN_POLL_INTERVAL_MS,
   nextPollInterval
 } from '../src/internal/poll'
 import type {
@@ -190,6 +191,37 @@ describe('createAndWait success path', () => {
       'completed'
     ])
   })
+
+  it('keeps polling when /status goes terminal before the full record agrees', async () => {
+    // Read-replica lag: /status reports completed, but the first full-record
+    // fetch still shows running. The wait must re-poll, not resolve early.
+    let recordCalls = 0
+    const fetchMock = vi
+      .fn()
+      .mockImplementation((url: string, init: RequestInit) => {
+        if (init.method === 'POST' && url.endsWith('/v1/simc/jobs')) {
+          return Promise.resolve(json(CREATE))
+        }
+        if (init.method === 'GET' && url.includes('/status')) {
+          return Promise.resolve(json({ status: 'completed' }))
+        }
+        if (init.method === 'GET') {
+          recordCalls++
+          return Promise.resolve(
+            json(jobRecord(recordCalls === 1 ? 'running' : 'completed'))
+          )
+        }
+        return Promise.reject(new Error(`unexpected ${init.method} ${url}`))
+      })
+    const client = makeClient(fetchMock)
+
+    const job = await settle(client.jobs.createAndWait(params))
+
+    expect(job.status).toBe('completed')
+    expect(recordCalls).toBe(2) // the lagging fetch, then the caught-up one
+    expect(statusPollCount(fetchMock)).toBe(2) // re-polled /status after the race
+    expect(didCancel(fetchMock)).toBe(false)
+  })
 })
 
 describe('createAndWait terminal failures', () => {
@@ -312,6 +344,25 @@ describe('createAndWait poll cadence', () => {
     expect(statusPollCount(fetchMock)).toBe(2)
     await vi.advanceTimersByTimeAsync(1)
     expect(statusPollCount(fetchMock)).toBe(3) // t=4750
+
+    await vi.runAllTimersAsync()
+    await guarded
+  })
+
+  it('floors a sub-minimum pollIntervalMs instead of hot-polling', async () => {
+    const fetchMock = makeFetch(['completed'], jobRecord('completed'))
+    const client = makeClient(fetchMock)
+    const guarded = client.jobs
+      .createAndWait(params, { pollIntervalMs: 0 })
+      .then(
+        () => {},
+        () => {}
+      )
+
+    await vi.advanceTimersByTimeAsync(MIN_POLL_INTERVAL_MS - 1)
+    expect(statusPollCount(fetchMock)).toBe(0) // not polled at t≈0
+    await vi.advanceTimersByTimeAsync(1)
+    expect(statusPollCount(fetchMock)).toBe(1) // first poll at the floor
 
     await vi.runAllTimersAsync()
     await guarded

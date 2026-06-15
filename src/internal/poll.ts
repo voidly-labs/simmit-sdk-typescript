@@ -2,6 +2,7 @@
 // orchestration so the cadence and deadline math are unit-testable.
 import type { JobCreateResponse, JobStatus } from '../api-types'
 
+export const MIN_POLL_INTERVAL_MS = 100
 export const DEFAULT_POLL_INTERVAL_MS = 1_000
 export const MAX_POLL_INTERVAL_MS = 10_000
 export const POLL_BACKOFF_FACTOR = 1.5
