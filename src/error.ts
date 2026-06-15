@@ -62,7 +62,7 @@ export class APIError<
     body: object | undefined,
     message: string | undefined
   ): string {
-    // The API's human-readable message field is named `error` (DESIGN §8.3).
+    // The API's human-readable message field is named `error`, not `message`.
     const bodyMessage = (body as ErrorEnvelope | undefined)?.error
     const msg =
       typeof bodyMessage === 'string'
@@ -176,8 +176,8 @@ export class AuthenticationError extends APIError<
   AuthenticationErrorCode
 > {}
 
-// 402 codes are docs-enumerated; the spec leaves `code` un-enumerated
-// (DESIGN §8.11), so the base class keeps `string` for forward compatibility.
+// 402 codes are docs-enumerated; the spec leaves `code` un-enumerated, so the
+// base class keeps `string` for forward compatibility.
 export class BillingError extends APIError<402, string> {}
 
 export type InsufficientCreditsMeta = {
@@ -288,7 +288,7 @@ export class InternalServerError extends APIError<number, string> {}
 /**
  * 503 carries four enumerated codes with distinct meta — a discriminated
  * union, narrowed via `.body`. `api_maintenance` gets no special retry
- * behavior (DESIGN §6): standard policy applies, and the typed
+ * behavior: standard policy applies, and the typed
  * `meta.retryAfterSeconds` is surfaced so callers can schedule their own
  * resubmission.
  */
@@ -364,7 +364,7 @@ export class APIUserAbortError extends APIError<
   }
 }
 
-// ── Job-level errors (thrown only by createAndWait — DESIGN §7) ─────────────
+// ── Job-level errors (thrown only by createAndWait) ──────────────────────────
 
 /** Catch-all for a job that reached a terminal state other than `completed`. */
 export abstract class JobUnsuccessfulError extends SimmitError {
@@ -412,6 +412,6 @@ export class JobWaitTimeoutError extends SimmitError {
   }
 }
 
-// ── Webhook verification (thrown by unwrapWebhook — DESIGN §4) ──────────────
+// ── Webhook verification (thrown by unwrapWebhook) ───────────────────────────
 
 export class WebhookVerificationError extends SimmitError {}
