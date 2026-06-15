@@ -9,6 +9,7 @@ import {
   APIUserAbortError
 } from '../error'
 import type { RequestOptions } from '../client'
+import { sleep, throwIfUserAborted } from './abort'
 
 export interface ClientConfig {
   secretKey: string
@@ -242,23 +243,4 @@ function parseRetryAfter(
   return Number.isFinite(ms) && ms > 0 && ms <= MAX_RETRY_AFTER_MS
     ? ms
     : undefined
-}
-
-function sleep(ms: number, signal: AbortSignal | undefined): Promise<void> {
-  return new Promise((resolve, reject) => {
-    throwIfUserAborted(signal)
-    const timeoutId = setTimeout(() => {
-      signal?.removeEventListener('abort', onAbort)
-      resolve()
-    }, ms)
-    const onAbort = () => {
-      clearTimeout(timeoutId)
-      reject(new APIUserAbortError())
-    }
-    signal?.addEventListener('abort', onAbort, { once: true })
-  })
-}
-
-function throwIfUserAborted(signal: AbortSignal | undefined): void {
-  if (signal?.aborted) throw new APIUserAbortError()
 }
