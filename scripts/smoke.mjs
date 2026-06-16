@@ -29,7 +29,10 @@ try {
       `✓ error mapping → NotFoundError status=${err.status} code=${err.code}`
     )
   } else if (err instanceof SimmitError) {
-    console.log(`• mapped to ${err.constructor.name} (expected NotFoundError)`)
+    console.error(
+      `✗ 4xx mapped to ${err.constructor.name}, expected NotFoundError`
+    )
+    process.exitCode = 1
   } else {
     throw err
   }
