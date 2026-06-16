@@ -30,7 +30,8 @@ const client = new Simmit({ secretKey: 'smt_sk_...' })
 ### Run a sim and wait for the result
 
 `createAndWait` submits a job and polls until it reaches a terminal state,
-resolving with the completed job:
+resolving with the completed job — ideal for scripts and queue workers that can
+hold a promise open:
 
 ```ts
 const job = await client.jobs.createAndWait({
@@ -53,17 +54,36 @@ await client.jobs.createAndWait(
 )
 ```
 
-### Submit without waiting
+### Submit, poll, and read the result (decoupled)
+
+For web apps that can't hold a promise open, drive the lifecycle yourself:
+`create` returns immediately with a job id to persist, then poll `getStatus` on
+your own cadence and read the result once terminal. A `job.terminal` webhook is
+the reliable completion signal when a browser poll can pause (see below).
 
 ```ts
 const { id } = await client.jobs.create({
   build: { channel: 'nightly' },
   profile: { text: profileText }
 })
+// persist `id`, return to the caller, then from a later request:
 
-const status = await client.jobs.get(id)
-const result = await client.jobs.getResult(id) // once terminal
-await client.jobs.cancel(id) // stop a running job
+const status = await client.jobs.getStatus(id) // status + progress, in any state
+if (status.status === 'completed') {
+  const result = await client.jobs.getResult(id)
+}
+
+await client.jobs.cancel(id) // request cancellation
+```
+
+### Artifact download URLs
+
+`getResult` returns each artifact with a stable download `url`, valid for the
+artifact's full retention window. To fetch that URL on demand instead — e.g. a
+browser flow that controls the final fetch — use:
+
+```ts
+const { url } = await client.artifacts.getUrl(artifactId)
 ```
 
 ### Credits

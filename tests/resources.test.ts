@@ -56,6 +56,19 @@ describe('resource → _request wiring', () => {
     expect(out).toBe(sentinel)
   })
 
+  it('jobs.getStatus → GET /v1/simc/jobs/{id}/status', () => {
+    const client = makeClient()
+    const { spy, sentinel } = spyRequest(client)
+
+    const out = client.jobs.getStatus('519253542012420096')
+
+    expect(spy).toHaveBeenCalledWith(
+      { method: 'GET', path: '/v1/simc/jobs/519253542012420096/status' },
+      undefined
+    )
+    expect(out).toBe(sentinel)
+  })
+
   it('jobs.getResult → GET /v1/simc/jobs/{id}/result', () => {
     const client = makeClient()
     const { spy, sentinel } = spyRequest(client)
@@ -95,6 +108,19 @@ describe('resource → _request wiring', () => {
     expect(out).toBe(sentinel)
   })
 
+  it('artifacts.getUrl → GET /v1/simc/artifacts/{id}/url', () => {
+    const client = makeClient()
+    const { spy, sentinel } = spyRequest(client)
+
+    const out = client.artifacts.getUrl('art_123')
+
+    expect(spy).toHaveBeenCalledWith(
+      { method: 'GET', path: '/v1/simc/artifacts/art_123/url' },
+      undefined
+    )
+    expect(out).toBe(sentinel)
+  })
+
   it('encodes the job id into the path', () => {
     const client = makeClient()
     const { spy } = spyRequest(client)
@@ -102,6 +128,30 @@ describe('resource → _request wiring', () => {
     client.jobs.get('weird/id?x')
 
     expect(spy.mock.calls[0]![0].path).toBe('/v1/simc/jobs/weird%2Fid%3Fx')
+  })
+})
+
+describe('jobs.getStatus (end to end)', () => {
+  it('returns live status for a non-terminal job without throwing', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(
+          JSON.stringify({ status: 'running', progress: { percent: 42 } }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        )
+      )
+    const client = new Simmit({ secretKey: 'smt_sk_test', fetch: fetchMock })
+
+    const status = await client.jobs.getStatus('519253542012420096')
+
+    expect(status.status).toBe('running')
+    expect(status.progress.percent).toBe(42)
+    const [url, init] = fetchMock.mock.calls[0]!
+    expect(url).toBe(
+      'https://api.simmit.com/v1/simc/jobs/519253542012420096/status'
+    )
+    expect(init.method).toBe('GET')
   })
 })
 
