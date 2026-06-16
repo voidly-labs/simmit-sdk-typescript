@@ -76,10 +76,11 @@ if (status.status === 'completed') {
 await client.jobs.cancel(id) // request cancellation
 ```
 
-### Refetching artifact URLs
+### Artifact download URLs
 
-The download `url`s on `getResult`'s artifacts expire. If a download returns a
-`403`, refetch a fresh URL:
+`getResult` returns each artifact with a stable download `url`, valid for the
+artifact's full retention window. To fetch that URL on demand instead — e.g. a
+browser flow that controls the final fetch — use:
 
 ```ts
 const { url } = await client.artifacts.getUrl(artifactId)

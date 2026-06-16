@@ -12,8 +12,10 @@ export class Artifacts {
   }
 
   /**
-   * Refetch a fresh signed download URL for an artifact. The `url`s returned on
-   * `jobs.getResult` expire; call this to renew one for a download that 403s.
+   * Fetch a stable public download URL for an artifact, valid for the
+   * artifact's full retention window — the same URL `jobs.getResult` returns,
+   * fetched on demand (e.g. browser flows that control the final fetch). The
+   * artifact is gone (410) once its retention window passes.
    */
   getUrl(
     artifactId: string,

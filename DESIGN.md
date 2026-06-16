@@ -436,8 +436,8 @@ now; §1 assumes the scope is ours.
 ## 9. Deliberate v1 exclusions
 
 - **Artifact download typing** + the versioned v2/v3 report artifact: needs its own typing
-  design. `artifacts.getUrl` (refetch an expired signed URL) ships in v1 alongside the artifact
-  references on `jobs.getResult`; downloading and parsing the report bytes does not.
+  design. `artifacts.getUrl` (fetch a stable artifact URL on demand) ships in v1 alongside the
+  artifact references on `jobs.getResult`; downloading and parsing the report bytes does not.
   Note for that design: artifact identity is `kind + stage` under multistage, not `kind` alone.
 - **`jobs.list` + pagination:** a cursor contract now exists (`limit`/`cursor` →
   `{ jobs, page: { limit, hasMore, nextCursor, since } }`) — exclusion is a scope choice, not an
@@ -461,8 +461,8 @@ now; §1 assumes the scope is ours.
 rev 2.1 → rev 2.2 (web-integrator audit):
 
 - Surface: `jobs.getStatus` and `artifacts.getUrl` promoted into v1 (were §9 deferrals). A real
-  web integrator drives an external poll loop (one `GET /status` per browser tick) and refetches
-  expired artifact URLs from stateless handlers; both endpoints are already in the spec. Full
+  web integrator drives an external poll loop (one `GET /status` per browser tick) and fetches
+  stable artifact URLs on demand from stateless handlers; both endpoints are already in the spec. Full
   artifact-download typing stays excluded. `createAndWait` now polls through `jobs.getStatus`.
 
 rev 2 → rev 2.1 (simhammer live-consumer audit):
