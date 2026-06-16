@@ -120,14 +120,16 @@ compose — first to fire aborts (timeout → `APIConnectionTimeoutError`, retry
 
 `api.md`-style listing — Types: `Job` · `JobCreateParams` · `JobCreateResponse` · `JobStatus` ·
 `JobErrorCode` · `CompletedJob` · `JobResult` · `JobStatusResponse` · `JobCancelResponse` ·
-`CreditBalance` · `CreditGrant`
+`CreditBalance` · `CreditGrant` · `ArtifactUrl`
 
 - <code title="post /v1/simc/jobs">client.jobs.create({ ...params }, options?) -> JobCreateResponse</code>
 - <code title="get /v1/simc/jobs/{id}">client.jobs.get(jobId, options?) -> Job</code>
+- <code title="get /v1/simc/jobs/{id}/status">client.jobs.getStatus(jobId, options?) -> JobStatusResponse</code>
 - <code title="get /v1/simc/jobs/{id}/result">client.jobs.getResult(jobId, options?) -> JobResult</code>
 - <code title="post /v1/simc/jobs + poll get /v1/simc/jobs/{id}/status">client.jobs.createAndWait({ ...params }, waitOptions?) -> CompletedJob</code>
 - <code title="post /v1/simc/jobs/{id}/cancel">client.jobs.cancel(jobId, options?) -> JobCancelResponse</code>
 - <code title="get /v1/simc/credits">client.credits.get(options?) -> CreditBalance</code>
+- <code title="get /v1/simc/artifacts/{id}/url">client.artifacts.getUrl(artifactId, options?) -> ArtifactUrl</code>
 
 ```ts
 export class Jobs {
@@ -136,6 +138,10 @@ export class Jobs {
     options?: RequestOptions
   ): APIPromise<JobCreateResponse>
   get(jobId: string, options?: RequestOptions): APIPromise<Job>
+  getStatus(
+    jobId: string,
+    options?: RequestOptions
+  ): APIPromise<JobStatusResponse>
   getResult(jobId: string, options?: RequestOptions): APIPromise<JobResult>
   createAndWait(
     params: JobCreateParams,
@@ -146,6 +152,10 @@ export class Jobs {
 
 export class Credits {
   get(options?: RequestOptions): APIPromise<CreditBalance>
+}
+
+export class Artifacts {
+  getUrl(artifactId: string, options?: RequestOptions): APIPromise<ArtifactUrl>
 }
 
 export interface JobWaitOptions extends RequestOptions {
@@ -425,13 +435,14 @@ now; §1 assumes the scope is ours.
 
 ## 9. Deliberate v1 exclusions
 
-- **Artifact downloads** (`artifacts/{id}/url`) + the versioned v2/v3 report artifact: needs its
-  own typing design; `jobs.getResult` already returns the typed summary and artifact references.
+- **Artifact download typing** + the versioned v2/v3 report artifact: needs its own typing
+  design. `artifacts.getUrl` (refetch an expired signed URL) ships in v1 alongside the artifact
+  references on `jobs.getResult`; downloading and parsing the report bytes does not.
   Note for that design: artifact identity is `kind + stage` under multistage, not `kind` alone.
 - **`jobs.list` + pagination:** a cursor contract now exists (`limit`/`cursor` →
   `{ jobs, page: { limit, hasMore, nextCursor, since } }`) — exclusion is a scope choice, not an
   API gap; the pagination idiom (Anthropic `Page` classes) lands with it.
-- **`jobs.getStatus` / `jobs.wait(jobId)`:** small, additive, v1.x.
+- **`jobs.wait(jobId)`:** small, additive, v1.x. (`jobs.getStatus` ships in v1 — see §4.)
 - **Builds & usage endpoints:** read-mostly metadata, additive later. Named gap: the docs'
   bundled-profiles best practice depends on excluded `GET /v1/simc/builds` — hand-rolled until v1.x.
 - **Plain-text submission** (`text/plain`): the SDK is JSON-only — the generated-types seam
@@ -446,6 +457,13 @@ now; §1 assumes the scope is ours.
 - **Auto preflight credit checks:** the 402's typed meta gives callers everything; the SDK makes no billing decisions.
 
 ## CHANGELOG
+
+rev 2.1 → rev 2.2 (web-integrator audit):
+
+- Surface: `jobs.getStatus` and `artifacts.getUrl` promoted into v1 (were §9 deferrals). A real
+  web integrator drives an external poll loop (one `GET /status` per browser tick) and refetches
+  expired artifact URLs from stateless handlers; both endpoints are already in the spec. Full
+  artifact-download typing stays excluded. `createAndWait` now polls through `jobs.getStatus`.
 
 rev 2 → rev 2.1 (simhammer live-consumer audit):
 

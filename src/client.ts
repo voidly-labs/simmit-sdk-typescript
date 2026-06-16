@@ -5,6 +5,7 @@ import {
   type ClientConfig,
   type RequestSpec
 } from './internal/request'
+import { Artifacts } from './resources/artifacts'
 import { Credits } from './resources/credits'
 import { Jobs } from './resources/jobs'
 
@@ -44,6 +45,7 @@ export interface RequestOptions {
 export default class Simmit {
   readonly jobs: Jobs
   readonly credits: Credits
+  readonly artifacts: Artifacts
 
   readonly baseURL: string
 
@@ -74,6 +76,7 @@ export default class Simmit {
 
     this.jobs = new Jobs(this)
     this.credits = new Credits(this)
+    this.artifacts = new Artifacts(this)
   }
 
   /** @internal Resource classes route through here; not public surface. */

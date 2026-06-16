@@ -74,6 +74,24 @@ export class Jobs {
   }
 
   /**
+   * Fetch the live status of a job in any state — `status`, `errorCode`,
+   * `progress`, and `queue` estimate. Unlike `getResult`, it never throws for a
+   * non-terminal job, so it is the supported way to drive a custom poll loop.
+   */
+  getStatus(
+    jobId: string,
+    options?: RequestOptions
+  ): APIPromise<JobStatusResponse> {
+    return this.#client._request<JobStatusResponse>(
+      {
+        method: 'GET',
+        path: `/v1/simc/jobs/${encodeURIComponent(jobId)}/status`
+      },
+      options
+    )
+  }
+
+  /**
    * Fetch the result summary of a terminal job. Throws `ResultNotReadyError`
    * (409) while the job is still running — poll `/status` or use
    * `createAndWait` rather than `/result` for a job in flight.
@@ -115,7 +133,6 @@ export class Jobs {
 
     const deadline =
       Date.now() + (waitTimeoutMs ?? deriveWaitTimeoutMs(created))
-    const statusPath = `/v1/simc/jobs/${encodeURIComponent(created.id)}/status`
     // nextPollInterval only ever grows the interval, so a non-positive seed
     // would hot-poll the status endpoint; floor it.
     let interval = Math.max(
@@ -132,10 +149,7 @@ export class Jobs {
       // Never sleep past the deadline, so the wait gives up promptly.
       await sleep(Math.min(interval, remaining), requestOptions.signal)
 
-      const status = await this.#client._request<JobStatusResponse>(
-        { method: 'GET', path: statusPath },
-        requestOptions
-      )
+      const status = await this.getStatus(created.id, requestOptions)
       onPoll?.(status)
       lastStatus = status.status
 

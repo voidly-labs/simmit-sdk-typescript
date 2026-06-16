@@ -26,6 +26,8 @@ export type CompletedJob = Job & { status: 'completed' }
 
 export type JobResult = Ok<paths['/v1/simc/jobs/{id}/result']['get']>
 
+export type ArtifactUrl = Ok<paths['/v1/simc/artifacts/{id}/url']['get']>
+
 export type JobStatusResponse = Ok<paths['/v1/simc/jobs/{id}/status']['get']>
 
 export type JobCancelResponse = Ok<paths['/v1/simc/jobs/{id}/cancel']['post']>
