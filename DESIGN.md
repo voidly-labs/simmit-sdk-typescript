@@ -1,4 +1,4 @@
-# Simmit TypeScript SDK — v1 Design (revision 2.1)
+# Simmit TypeScript SDK — v1 Design (revision 2.3)
 
 Scope: public surface and foundations only — a design proposal, not an implementation.
 Convention reference: `anthropic-sdk-typescript`; where this doc is silent, that SDK's idiom is
@@ -120,7 +120,7 @@ compose — first to fire aborts (timeout → `APIConnectionTimeoutError`, retry
 
 `api.md`-style listing — Types: `Job` · `JobCreateParams` · `JobCreateResponse` · `JobStatus` ·
 `JobErrorCode` · `CompletedJob` · `JobResult` · `JobStatusResponse` · `JobCancelResponse` ·
-`CreditBalance` · `CreditGrant` · `ArtifactUrl`
+`CreditBalance` · `CreditGrant` · `ArtifactUrl` · `Artifact` · `ArtifactKind`
 
 - <code title="post /v1/simc/jobs">client.jobs.create({ ...params }, options?) -> JobCreateResponse</code>
 - <code title="get /v1/simc/jobs/{id}">client.jobs.get(jobId, options?) -> Job</code>
@@ -438,7 +438,8 @@ now; §1 assumes the scope is ours.
 - **Artifact download typing** + the versioned v2/v3 report artifact: needs its own typing
   design. `artifacts.getUrl` (fetch a stable artifact URL on demand) ships in v1 alongside the
   artifact references on `jobs.getResult`; downloading and parsing the report bytes does not.
-  Note for that design: artifact identity is `kind + stage` under multistage, not `kind` alone.
+  Artifact _selection_ (typed `kind`, stage-aware pickers) is designed in §10 for v1.x — artifact
+  identity is `kind + stage` under multistage, not `kind` alone.
 - **`jobs.list` + pagination:** a cursor contract now exists (`limit`/`cursor` →
   `{ jobs, page: { limit, hasMore, nextCursor, since } }`) — exclusion is a scope choice, not an
   API gap; the pagination idiom (Anthropic `Page` classes) lands with it.
@@ -456,7 +457,62 @@ now; §1 assumes the scope is ours.
 - **Test-mode/sandbox affordances:** `baseURL`/`SIMMIT_BASE_URL` already point anywhere; sugar waits for a real sandbox contract.
 - **Auto preflight credit checks:** the 402's typed meta gives callers everything; the SDK makes no billing decisions.
 
+## 10. Artifact selection (v1.x)
+
+`jobs.getResult()` exposes the artifact list at `result.result.artifacts`. Picking "the JSON
+report" or "the final-stage HTML" is fiddly enough that integrators get it wrong, so the SDK owns
+the **taxonomy** and **selection** — but not persistence (storage paths, `kind`→DB mapping, and
+critical-vs-background ordering stay the caller's).
+
+Types — the seam derives `Artifact` from the generated result and widens `kind` to a
+forward-compatible union:
+
+```ts
+export type Artifact = JobResult['result']['artifacts'][number]
+//   { id: string; url: string; kind: ArtifactKind; mimeType: string; stage: number | null }
+export type ArtifactKind =
+  | 'json_report'
+  | 'html_report'
+  | 'stdout_log'
+  | 'stderr_log'
+  | (string & {}) // open union — a new server kind widens, never breaks, the type
+```
+
+Selectors — pure free functions (no request; the result stays the plain generated record). They
+also hide the `result.result.artifacts` nesting:
+
+- <code>selectArtifact(result, kind) -> Artifact | undefined</code> — the canonical artifact of
+  `kind`: the entry with the greatest `stage` (`null` treated as lowest), else `undefined`.
+- <code>selectArtifacts(result, kind) -> Artifact[]</code> — every artifact of `kind`, ascending
+  by `stage`.
+
+Selection is **per-kind on purpose.** A global `max(stage)` filter — the obvious hand-rolled
+approach — drops a `stage: null` `json_report` when another kind reaches a higher stage;
+`selectArtifact` never does — encoding that is the helper's reason to exist (without it, it would
+be gratuitous sugar).
+
+Stage semantics — the contract states `stage` is `null` for single-run / not-stage-specific
+artifacts and 1-indexed for multistage. **Open question to pin before shipping:** is the highest
+stage always the canonical/final artifact of a kind, and does each stage emit its own
+`json_report`/logs or only the final? `selectArtifact`'s null-as-lowest rule assumes highest =
+canonical — confirm upstream and state it here.
+
+`mimeType` is already typed and non-null; consume it directly, never derive a content type from
+`kind`. Keeping it accurate is an API-side guarantee, not an SDK concern.
+
+Prerequisites (upstream): enumerate `kind` in the spec (§8.14) so the generated union is exact —
+until then `ArtifactKind` degrades to `string` and the selectors still work — and document the
+stage canonical-ness above. Still excluded (as in §9): downloading/parsing the report bytes and
+the versioned v2/v3 report schema.
+
 ## CHANGELOG
+
+rev 2.2 → rev 2.3 (artifact-selection design):
+
+- §10 added: artifact taxonomy (`ArtifactKind` open union), pure `selectArtifact`/`selectArtifacts`
+  pickers (per-kind, stage-aware), `mimeType` guidance. v1.x; gated on enumerating `kind` upstream
+  (§8.14) and confirming the highest-stage-is-canonical rule. Corrects the artifact path to the
+  nested `result.result.artifacts`.
 
 rev 2.1 → rev 2.2 (web-integrator audit):
 
