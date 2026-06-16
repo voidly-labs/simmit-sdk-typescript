@@ -56,13 +56,13 @@ const job = await client.jobs.createAndWait(
 )
 console.log('✓ createAndWait → completed', job.id)
 
-// Dump the result to confirm the live shape matches JobResult — notably
-// summary.mainActor (+ optional profilesets) and the artifacts[] entries.
+// Dump the result to confirm the live shape matches JobResult — notably the
+// nested result.summary.mainActor (+ optional profilesets) and result.artifacts[].
 const result = await client.jobs.getResult(job.id)
 console.log('✓ getResult → confirm this matches the JobResult type:')
 console.log(JSON.stringify(result, null, 2).slice(0, 4000))
 
-const artifact = result.artifacts?.[0]
+const artifact = result.result?.artifacts?.[0]
 if (artifact?.id) {
   const fresh = await client.artifacts.getUrl(artifact.id)
   console.log('✓ artifacts.getUrl →', fresh.url)
