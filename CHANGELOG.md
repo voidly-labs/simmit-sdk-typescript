@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.1.0...v0.1.1) (2026-06-17)
+
+
+### Miscellaneous Chores
+
+* drop the one-time release-as ([#33](https://github.com/voidly-labs/simmit-sdk-typescript/issues/33)) ([9c0bc08](https://github.com/voidly-labs/simmit-sdk-typescript/commit/9c0bc0880f90081d5876e9e5c1012b87afc1943e))
+
 ## 0.1.0 (2026-06-17)
 
 
