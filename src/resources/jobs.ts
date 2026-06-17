@@ -74,7 +74,7 @@ export class Jobs {
   }
 
   /**
-   * Fetch the live status of a job in any state — `status`, `errorCode`,
+   * Fetch the live status of a job in any state: `status`, `errorCode`,
    * `progress`, and `queue` estimate. Unlike `getResult`, it never throws for a
    * non-terminal job, so it is the supported way to drive a custom poll loop.
    */
@@ -93,7 +93,7 @@ export class Jobs {
 
   /**
    * Fetch the result summary of a terminal job. Throws `ResultNotReadyError`
-   * (409) while the job is still running — poll `/status` or use
+   * (409) while the job is still running. Poll `/status` or use
    * `createAndWait` rather than `/result` for a job in flight.
    */
   getResult(jobId: string, options?: RequestOptions): APIPromise<JobResult> {
@@ -112,7 +112,7 @@ export class Jobs {
    * a 10s cap), then fetches the full record. Resolves with the `CompletedJob`
    * on success; throws `JobFailedError` / `JobCancelledError` /
    * `JobTimedOutError` for the other terminal states, or `JobWaitTimeoutError`
-   * if the deadline passes first — the job keeps running and is **not**
+   * if the deadline passes first. The job keeps running and is **not**
    * cancelled (call `cancel(jobId)` to stop the spend). `signal` aborts the wait
    * with `APIUserAbortError`, also without cancelling.
    */

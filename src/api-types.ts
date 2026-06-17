@@ -1,6 +1,6 @@
 // The ONLY file that may import from src/generated/. Maps the generator's
 // indexed-access types to the SDK's public names so the generation tool stays
-// swappable — nothing else in the codebase sees the generator's shapes.
+// swappable: nothing else in the codebase sees the generator's shapes.
 import type { paths } from './generated/openapi'
 
 /** 200-response JSON body of an operation. */

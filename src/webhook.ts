@@ -1,6 +1,6 @@
 // Standalone webhook verification. Not a client method: receivers must not
 // need a secret-key-bearing client (whose constructor throws without a key).
-// WebCrypto only — zero deps, and runs in Workers as well as Node.
+// WebCrypto only, zero deps, and runs in Workers as well as Node.
 import type { JobStatus } from './api-types'
 import { WebhookVerificationError } from './error'
 
@@ -22,8 +22,8 @@ export interface WebhookEvent {
 }
 
 /**
- * Verifies an `X-Simmit-Signature` header — `t=<unix>,v1=<hex>`, an HMAC-SHA256
- * (timing-safe) over `${t}.${rawBody}` within a 300s default tolerance — and
+ * Verifies an `X-Simmit-Signature` header (`t=<unix>,v1=<hex>`, an HMAC-SHA256
+ * (timing-safe) over `${t}.${rawBody}` within a 300s default tolerance) and
  * returns the parsed event. Throws `WebhookVerificationError` on a bad
  * signature, malformed header, or stale timestamp.
  *

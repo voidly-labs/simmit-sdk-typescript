@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Please report security vulnerabilities **privately** — do not open a public issue or PR.
+Please report security vulnerabilities **privately**: do not open a public issue or PR.
 
 Use GitHub's [private vulnerability reporting](https://github.com/voidly-labs/simmit-sdk-typescript/security/advisories/new): the repository's **Security** tab → **Report a vulnerability**. We'll acknowledge the report and keep you posted on the fix and disclosure.
 

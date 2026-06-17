@@ -10,7 +10,7 @@ import { Credits } from './resources/credits'
 import { Jobs } from './resources/jobs'
 
 export interface ClientOptions {
-  /** Defaults to process.env['SIMMIT_SECRET_KEY'] — exactly one env fallback. Construction
+  /** Defaults to process.env['SIMMIT_SECRET_KEY'], exactly one env fallback. Construction
    *  throws SimmitError('Missing secret key. Pass secretKey or set SIMMIT_SECRET_KEY.').
    *  "Secret key" is the credential noun end to end (dashboard → docs → env var → option →
    *  error): it spends credits and must never ship client-side. */
