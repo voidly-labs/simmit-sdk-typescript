@@ -4,6 +4,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Delay version-update PRs so a freshly-published malicious release is caught
+    # before it lands. Security updates are exempt and still come through fast.
+    cooldown:
+      default-days: 3
     groups:
       dev-dependencies:
         patterns: ['*']
@@ -15,6 +19,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 3
     groups:
       actions:
         patterns: ['*']
