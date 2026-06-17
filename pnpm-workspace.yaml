@@ -1,0 +1,5 @@
+# Don't resolve dependency versions published in the last 72h, so a malicious
+# release that's caught and yanked within that window never enters the lockfile.
+# Affects resolution (pnpm update, bumps); already-pinned versions still install
+# under --frozen-lockfile.
+minimumReleaseAge: 4320 # minutes
