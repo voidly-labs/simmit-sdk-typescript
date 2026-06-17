@@ -1,6 +1,6 @@
 // Manual pre-release smoke check: runs the built SDK against a real Simmit API
 // to confirm the wire format and error mapping still match the types. Not part
-// of the automated suite — it needs a secret key, and the full run spends a
+// of the automated suite. It needs a secret key, and the full run spends a
 // little credit. Run via `pnpm smoke` (builds first, then executes):
 //
 //   SIMMIT_SECRET_KEY=smt_sk_... pnpm smoke
@@ -42,7 +42,7 @@ try {
 const profileFile = process.env.SIMMIT_PROFILE_FILE
 if (!profileFile) {
   console.log(
-    '— set SIMMIT_PROFILE_FILE=./your.simc to also exercise create → result'
+    'Set SIMMIT_PROFILE_FILE=./your.simc to also exercise create → result'
   )
   process.exit()
 }
@@ -59,7 +59,7 @@ const job = await client.jobs.createAndWait(
 )
 console.log('✓ createAndWait → completed', job.id)
 
-// Dump the result to confirm the live shape matches JobResult — notably the
+// Dump the result to confirm the live shape matches JobResult: notably the
 // nested result.summary.mainActor (+ optional profilesets) and result.artifacts[].
 const result = await client.jobs.getResult(job.id)
 console.log('✓ getResult → confirm this matches the JobResult type:')

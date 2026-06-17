@@ -21,9 +21,9 @@ export function isTerminal(status: JobStatus): boolean {
 }
 
 /**
- * Default wait deadline: the applied ceilings the create response reports —
- * `(queueSeconds + runtimeSeconds) × 1000` plus a 60s grace — or a 45-minute
- * fallback when either ceiling is null.
+ * Default wait deadline derived from the applied ceilings the create response
+ * reports: `(queueSeconds + runtimeSeconds) × 1000` plus a 60s grace, falling
+ * back to 45 minutes when either ceiling is null.
  */
 export function deriveWaitTimeoutMs(created: JobCreateResponse): number {
   const { runtimeSeconds, queueSeconds } = created.runtime.ceiling

@@ -13,7 +13,7 @@ export class Artifacts {
 
   /**
    * Fetch a stable public download URL for an artifact, valid for the
-   * artifact's full retention window — the same URL `jobs.getResult` returns,
+   * artifact's full retention window: the same URL `jobs.getResult` returns,
    * fetched on demand (e.g. browser flows that control the final fetch). The
    * artifact is gone (410) once its retention window passes.
    */

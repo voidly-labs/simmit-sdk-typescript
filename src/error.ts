@@ -37,7 +37,7 @@ export class APIError<
   readonly code: TCode
   /** Typed `meta` from the error envelope. */
   readonly meta: TMeta
-  /** Raw parsed JSON error body — escape hatch for unmapped fields. */
+  /** Raw parsed JSON error body: escape hatch for unmapped fields. */
   readonly error: object | undefined
 
   constructor(
@@ -195,7 +195,7 @@ export class InsufficientCreditsError extends BillingError {
 
 export type InsufficientCreditsLiabilityMeta = {
   reason: string
-  /** The high-priority fee in effect — top up, or resubmit at priority 'standard'. */
+  /** The high-priority fee in effect. Top up, or resubmit at priority 'standard'. */
   priorityFeeCredits: number
   docsUrl?: string
 }
@@ -286,7 +286,7 @@ export class MaxActiveJobsError extends RateLimitError {
 export class InternalServerError extends APIError<number, string> {}
 
 /**
- * 503 carries four enumerated codes with distinct meta — a discriminated
+ * 503 carries four enumerated codes with distinct meta: a discriminated
  * union, narrowed via `.body`. `api_maintenance` gets no special retry
  * behavior: standard policy applies, and the typed
  * `meta.retryAfterSeconds` is surfaced so callers can schedule their own
@@ -390,7 +390,7 @@ export class JobCancelledError extends JobUnsuccessfulError {}
 export class JobTimedOutError extends JobUnsuccessfulError {}
 
 /**
- * The SDK gave up polling — the job itself is still running and billing.
+ * The SDK gave up polling. The job itself is still running and billing.
  * Keep tracking via `jobs.get(jobId)` or stop the spend with `jobs.cancel(jobId)`.
  */
 export class JobWaitTimeoutError extends SimmitError {

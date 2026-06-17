@@ -1,5 +1,5 @@
 /**
- * A `Promise<T>` with raw-response access — the generic answer to response
+ * A `Promise<T>` with raw-response access: the generic answer to response
  * headers the return types can't see (`X-Idempotent-Replay`, `X-Active-Jobs`,
  * `X-RateLimit-*`).
  *

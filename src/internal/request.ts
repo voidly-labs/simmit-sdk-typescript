@@ -29,7 +29,7 @@ export interface RequestSpec {
   idempotent?: boolean
 }
 
-// Retry policy constants — typed code config, not env.
+// Retry policy constants: typed code config, not env.
 const INITIAL_BACKOFF_MS = 500
 const MAX_BACKOFF_MS = 8_000
 const MAX_RETRY_AFTER_MS = 60_000
@@ -66,8 +66,8 @@ async function run<T>(
       })
     } catch (err) {
       if (err instanceof APIUserAbortError) throw err
-      // Connection error, malformed success body, or per-attempt timeout —
-      // all retryable.
+      // Connection error, malformed success body, or per-attempt timeout.
+      // All retryable.
       if (attempt < maxRetries) {
         await backoff(attempt, undefined, options.signal)
         continue
@@ -130,7 +130,7 @@ async function fetchAttempt(
       signal: controller.signal
     })
 
-    // The body is read inside the timed scope too — a stalled body must not
+    // The body is read inside the timed scope too: a stalled body must not
     // hang past the per-attempt timeout (fetch ties the body stream to the
     // controller's signal, so the abort cancels the read).
     let json: unknown
@@ -173,7 +173,7 @@ function buildHeaders(
     ...(spec.body !== undefined ? { 'content-type': 'application/json' } : {}),
     ...(idempotent && !options.idempotencyKey
       ? {
-          // Generated once per call and reused across retry attempts — that
+          // Generated once per call and reused across retry attempts. That
           // is what makes POST retries safe by default. The auto
           // key is an SDK built-in default (lowest tier), so defaultHeaders
           // may override it.
@@ -229,7 +229,7 @@ async function backoff(
   await sleep(delay, signal)
 }
 
-/** Accepts `Retry-After` only when it parses to a delay in (0, 60s] — the SDK never sleeps arbitrarily long on a server hint. */
+/** Accepts `Retry-After` only when it parses to a delay in (0, 60s]: the SDK never sleeps arbitrarily long on a server hint. */
 function parseRetryAfter(
   header: string | null | undefined
 ): number | undefined {

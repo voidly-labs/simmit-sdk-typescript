@@ -1,6 +1,6 @@
-# Simmit TypeScript SDK — v1 Design (revision 2.3)
+# Simmit TypeScript SDK: v1 Design (revision 2.3)
 
-Scope: public surface and foundations only — a design proposal, not an implementation.
+Scope: public surface and foundations only, a design proposal, not an implementation.
 Convention reference: `anthropic-sdk-typescript`; where this doc is silent, that SDK's idiom is
 the answer. Spec/docs/review disagreements about a shape resolve to `openapi-typescript` output
 from the live spec as ground truth; overrides are flagged inline.
@@ -14,7 +14,7 @@ webhook verification, typed errors.
 ## 1. Package name and file layout
 
 **Recommendation: `@simmit/sdk`.** Mirrors `@anthropic-ai/sdk`, squat-proof, leaves room for
-future `@simmit/*`. Alternative: unscoped `simmit`, OpenAI-style — only if free and forever.
+future `@simmit/*`. Alternative: unscoped `simmit`, OpenAI-style, only if free and forever.
 
 ```
 simmit-sdk/
@@ -38,7 +38,7 @@ and is regenerated in CI with a drift check (regenerate → `git diff --exit-cod
 handwritten file, `api-types.ts`, may import from `generated/`:
 
 ```ts
-// src/api-types.ts — the ONLY file that imports from src/generated/
+// src/api-types.ts: the ONLY file that imports from src/generated/
 import type { paths } from './generated/openapi'
 type Ok<P extends keyof paths, M> = ... // shorthand: 200-response JSON body at paths[P][M]
 
@@ -56,7 +56,7 @@ export type CreditGrant = CreditBalance['grants'][number]
 ```
 
 Swapping the generator later means rewriting `api-types.ts` only; nothing else sees its shapes.
-`WebhookEvent` (§4) is the one hand-written wire type — the spec has no webhook schema (§8.9).
+`WebhookEvent` (§4) is the one hand-written wire type. The spec has no webhook schema (§8.9).
 Publishing: tsup → `dist/`, `exports` map (ESM+CJS+`.d.ts`), `engines.node: ">=20"`, `sideEffects: false`.
 
 ## 2. Client constructor
@@ -69,7 +69,7 @@ export default class Simmit {
 }
 
 export interface ClientOptions {
-  /** Defaults to process.env['SIMMIT_SECRET_KEY'] — exactly one env fallback. Construction
+  /** Defaults to process.env['SIMMIT_SECRET_KEY'], exactly one env fallback. Construction
    *  throws SimmitError('Missing secret key. Pass secretKey or set SIMMIT_SECRET_KEY.').
    *  "Secret key" is the credential noun end to end (dashboard → docs → env var → option →
    *  error): it spends credits and must never ship client-side. */
@@ -89,7 +89,7 @@ export interface ClientOptions {
 }
 ```
 
-Deliberately omitted vs. Anthropic: `authToken`/OAuth, profiles, middleware, logging hooks — no
+Deliberately omitted vs. Anthropic: `authToken`/OAuth, profiles, middleware, logging hooks. No
 v1 use case; surface added later is cheap, surface removed is not.
 
 ## 3. Per-request options and precedence
@@ -113,12 +113,12 @@ export interface RequestOptions {
 
 **Precedence rule: per-request option > constructor option > SDK built-in default.** Scalars
 replace; `headers` merge per-key (per-request wins, `null` deletes). `timeout` and `signal`
-compose — first to fire aborts (timeout → `APIConnectionTimeoutError`, retryable; user signal →
+compose: first to fire aborts (timeout → `APIConnectionTimeoutError`, retryable; user signal →
 `APIUserAbortError`, terminal).
 
 ## 4. Resources and method signatures
 
-`api.md`-style listing — Types: `Job` · `JobCreateParams` · `JobCreateResponse` · `JobStatus` ·
+`api.md`-style listing. Types: `Job` · `JobCreateParams` · `JobCreateResponse` · `JobStatus` ·
 `JobErrorCode` · `CompletedJob` · `JobResult` · `JobStatusResponse` · `JobCancelResponse` ·
 `CreditBalance` · `CreditGrant` · `ArtifactUrl` · `Artifact` · `ArtifactKind`
 
@@ -171,19 +171,19 @@ export interface JobWaitOptions extends RequestOptions {
 ```
 
 `jobs.cancel` is promoted into v1 so the `JobWaitTimeoutError`/abort story names a problem the
-SDK can remediate. `JobCancelResponse` is the spec's cancel envelope — a union discriminated on
+SDK can remediate. `JobCancelResponse` is the spec's cancel envelope (a union discriminated on
 `status`: `{ success: true; id: string; status: 'cancelled' }` | `{ success: true; id: string;
-status: 'cancel_requested'; cancelRequestedAt: string }` — **not** `Job` (overrides review §E).
+status: 'cancel_requested'; cancelRequestedAt: string }`), **not** `Job` (overrides review §E).
 
 `JobCreateParams` sketch (authoritative type is generated; the server schema is `.strict()`, so
-unknown keys reject — accurate generated types are load-bearing, not decorative):
+unknown keys reject: accurate generated types are load-bearing, not decorative):
 
 ```ts
 {
   build: { channel: 'nightly' | 'weekly' | 'latest'; gitBranch?: 'midnight' }
   profile: { text: string }                      // ≤ 2 MB UTF-8
   runtime?: { multiStage?: boolean; maxRuntimeSeconds?: number; maxQueueSeconds?: number }
-  priority?: 'background' | 'standard' | 'high'  // enum/prose disagree — §8.6
+  priority?: 'background' | 'standard' | 'high'  // enum/prose disagree, §8.6
   metadata?: Record<string, string>              // echoed back; excluded from idempotency digest (§6)
   credentials?: { bnetClientId: string; bnetClientSecret: string }
   webhook?: { events: ['job.terminal'] }
@@ -193,7 +193,7 @@ unknown keys reject — accurate generated types are load-bearing, not decorativ
 
 Reproducibility: `build.channel` resolves at execution time (no buildId pin on create); read `job.build.commit` post-hoc to record what ran.
 
-**`APIPromise` (Anthropic idiom).** Single-request methods return `APIPromise<T>` — the generic
+**`APIPromise` (Anthropic idiom).** Single-request methods return `APIPromise<T>`: the generic
 answer to headers the return types can't see (`X-Idempotent-Replay`, `X-Active-Jobs`,
 `X-RateLimit-*`), with no replay boolean bolted on. `createAndWait` orchestrates many requests,
 so it returns a plain `Promise`.
@@ -206,9 +206,9 @@ export class APIPromise<T> extends Promise<T> {
 ```
 
 **Standalone webhook export.** Ships in v1: the scheme is published, versioned (`v1=`), with
-reference implementations — de facto frozen. Standalone, not a client method: webhook receivers
-must not need a secret-key-bearing client (whose constructor throws without a key). WebCrypto —
-zero deps, incidentally Workers-compatible — hence async. Unwrap-style because the dominant
+reference implementations. De facto frozen. Standalone, not a client method: webhook receivers
+must not need a secret-key-bearing client (whose constructor throws without a key). WebCrypto
+(zero deps, incidentally Workers-compatible), hence async. Unwrap-style because the dominant
 precedents (Stripe `constructEvent`, Svix `verify`) parse-and-throw, making it impossible to
 consume an unverified payload. (Overrides review §E's sync `boolean`.)
 
@@ -216,7 +216,7 @@ consume an unverified payload. (Overrides review §E's sync `boolean`.)
 /** Verifies X-Simmit-Signature ("t=<unix>,v1=<hex>", HMAC-SHA256 over `${t}.${rawBody}`,
  *  timing-safe, tolerance 300s). Throws WebhookVerificationError on bad signature/header/age. */
 export function unwrapWebhook(
-  rawBody: string, // request body exactly as received — do not re-serialize
+  rawBody: string, // request body exactly as received: do not re-serialize
   signatureHeader: string, // the X-Simmit-Signature header value
   secret: string, // webhook signing secret (dashboard → Clients & Keys → Webhook)
   options?: { toleranceSeconds?: number }
@@ -242,7 +242,7 @@ export interface WebhookEvent {
 The API's error envelope is uniformly `{ error: string; code: string; meta: object | null }`.
 Hierarchy mirrors Anthropic's `core/error.ts` (status classes, `APIError.generate` factory), with
 code-based subclasses only where a `code` is enumerated with structured `meta`. Every class pins
-`status`/`code`/`meta` to narrow types — no `unknown` bags; un-enumerated `code`s are `string`, flagged in §8.
+`status`/`code`/`meta` to narrow types: no `unknown` bags; un-enumerated `code`s are `string`, flagged in §8.
 
 ```
 SimmitError extends Error
@@ -257,7 +257,7 @@ SimmitError extends Error
 │   │   ├── IdempotencyKeyReuseError       409 · code: 'idempotency_key_reuse'
 │   │   ├── ResultNotReadyError            409 · code: 'result_not_ready' (job not terminal yet)
 │   │   └── JobNotCancellableError         409 · code: 'job_not_cancellable'
-│   ├── RequestTooLargeError               413 · code: string ('profile_too_large' is prose-only — §8)
+│   ├── RequestTooLargeError               413 · code: string ('profile_too_large' is prose-only, §8)
 │   ├── UnprocessableEntityError           422 · code: string
 │   │   ├── InvalidProfileError            422 · code: 'input_sanitized_rejected'
 │   │   └── ResultUnavailableError         422 · code: 'result_unavailable' (terminal, no result)
@@ -269,11 +269,11 @@ SimmitError extends Error
 │   │   └── APIConnectionTimeoutError      per-attempt timeout exhausted retries
 │   └── APIUserAbortError                  caller's AbortSignal fired
 ├── WebhookVerificationError               unwrapWebhook: bad signature / header / timestamp
-├── JobUnsuccessfulError                   .job: Job — abstract catch-all, thrown by createAndWait
+├── JobUnsuccessfulError                   .job: Job, abstract catch-all, thrown by createAndWait
 │   ├── JobFailedError                     job.status = 'failed'
 │   ├── JobCancelledError                  job.status = 'cancelled' (incl. queue_timeout auto-cancel)
 │   └── JobTimedOutError                   job.status = 'timed_out' (hit its runtime ceiling)
-└── JobWaitTimeoutError                    SDK gave up polling · .jobId .lastStatus — job still runs
+└── JobWaitTimeoutError                    SDK gave up polling · .jobId .lastStatus, job still runs
 ```
 
 Representative declarations (subclasses narrow the base's readonly properties):
@@ -298,7 +298,7 @@ export class InsufficientCreditsError extends BillingError {
 }
 export class InsufficientCreditsLiabilityError extends BillingError {
   readonly code: 'insufficient_credits_liability'
-  /** Docs: use priorityFeeCredits to decide — top up, or resubmit at priority 'standard'. */
+  /** Docs: use priorityFeeCredits to decide. Top up, or resubmit at priority 'standard'. */
   readonly meta: { reason: string; priorityFeeCredits: number; docsUrl?: string } | null
 }
 export class InvalidProfileError extends UnprocessableEntityError {
@@ -316,7 +316,7 @@ export class InvalidProfileError extends UnprocessableEntityError {
 //   ResultUnavailableError    { status: 'completed' | 'failed' | 'cancelled' | 'timed_out' }
 //   MaxActiveJobsError        { reason: 'max_active_jobs_exceeded'; maxActiveJobs: number; activeJobs: number }
 
-/** 503 carries four enumerated codes with distinct meta — a discriminated union, narrowed via .body */
+/** 503 carries four enumerated codes with distinct meta: a discriminated union, narrowed via .body */
 export type ServiceUnavailableBody =
   | { code: 'queue_unavailable'; meta: { reason: 'queue_unavailable'; queueHealth: string } }
   | { code: 'queue_health_unknown'; meta: { reason: 'queue_health_unknown'; laneId: string } }
@@ -340,21 +340,21 @@ scope; hand-rolled calls surface it as base `APIError`.
 ## 6. Retry and idempotency policy
 
 - **Retryable:** HTTP 408 (defensive; not in spec), 429, all 5xx, connection errors, per-attempt
-  timeouts. **Not retryable:** every other 4xx — including 409, owning the exception:
+  timeouts. **Not retryable:** every other 4xx, including 409, owning the exception:
   `result_not_ready` _is_ transient, but `jobs.getResult` on a non-terminal job throws a typed
   `ResultNotReadyError` immediately by design (poll `/status`, not `/result`); `createAndWait`
   polls `/status` so it structurally never hits it; the other 409s are deterministic.
 - **Attempts:** `maxRetries` default 2 → at most 3 attempts. `maxRetries: 0` disables retries.
 - **Backoff:** `min(500ms × 2^attempt, 8s)`, multiplied by jitter drawn from [0.75, 1.0]
   (Stainless formula). **`Retry-After` position:** honored only when it parses (seconds or
-  HTTP-date) to a delay in (0, 60s]; otherwise ignored in favor of computed backoff — the SDK
+  HTTP-date) to a delay in (0, 60s]; otherwise ignored in favor of computed backoff. The SDK
   never sleeps arbitrarily long on a server hint. No special path for `api_maintenance` (§5).
 - **Abort:** the caller's `signal` cancels in-flight attempts _and_ backoff sleeps.
 - **Idempotency keys:** `jobs.create`/`jobs.createAndWait` auto-generate
   `idempotency-key: simmit-node-retry-<crypto.randomUUID()>` when `options.idempotencyKey` is
-  absent — generated once per call, reused across retry attempts: that is what makes POST retries
+  absent, generated once per call, reused across retry attempts: that is what makes POST retries
   safe by default. A user-supplied key passes through verbatim (server replays the original job
-  on payload match with `X-Idempotent-Replay: true` — visible via `.withResponse()` — and 409s
+  on payload match with `X-Idempotent-Replay: true` (visible via `.withResponse()`) and 409s
   on mismatch). Contract, per docs: the digest **excludes `metadata`** (meant to mutate across
   retries); keys are **scoped to API key + endpoint**; keys have **no TTL**. GETs and cancel
   carry no key (repeat cancels are naturally idempotent).
@@ -365,59 +365,59 @@ Flow: `create` → poll `GET /v1/simc/jobs/{id}/status` → on terminal status, 
 the full record → return or throw.
 
 - **Polling cadence:** first poll after `pollIntervalMs` (default 1s), interval ×1.5 per poll,
-  capped at 10s — sub-10s latency on short sims, ~6 req/min steady-state on long ones.
+  capped at 10s: sub-10s latency on short sims, ~6 req/min steady-state on long ones.
   (Queue-estimate-aware pacing via `queue.estimatedStartSeconds` is v1.x.)
 - **Wait deadline:** `maxRuntimeSeconds` defaults to 300s, but account ceilings vary and are not
-  publicly bounded, plus up to `maxQueueSeconds` (default 1800s) queued — a static default would
+  publicly bounded, plus up to `maxQueueSeconds` (default 1800s) queued. A static default would
   be wrong for someone. The create response returns the _applied_ ceilings, so the default is
   per-job: `(runtime.ceiling.queueSeconds + runtime.ceiling.runtimeSeconds) × 1000 + 60_000`
   grace, falling back to 45 minutes if the ceilings are null. `waitTimeoutMs` overrides; no hard max.
-- **Returns:** `CompletedJob` (`Job & { status: 'completed' }`) — typed so the success path needs
+- **Returns:** `CompletedJob` (`Job & { status: 'completed' }`), typed so the success path needs
   no status checks; follow with `jobs.getResult(job.id)` for the sim output.
 - **Throws:** `JobFailedError` / `JobCancelledError` / `JobTimedOutError` for the three
   non-success terminal states, each carrying the full `.job`; `JobWaitTimeoutError` when the
-  deadline passes — the job is **not** cancelled server-side; it keeps running and billing, and
+  deadline passes. The job is **not** cancelled server-side; it keeps running and billing, and
   the error carries `.jobId` and `.lastStatus` so the caller can keep tracking via `jobs.get` or
   stop the spend with `jobs.cancel(jobId)`; `APIUserAbortError` if `signal` fires (likewise no
-  implicit cancel — pair the abort with `jobs.cancel` when the job itself is unwanted).
+  implicit cancel: pair the abort with `jobs.cancel` when the job itself is unwanted).
   Returning the terminal job instead was rejected: it forces status-branching everywhere and
   loses the `CompletedJob` return type.
 - **`onCreated` hook:** fired synchronously with the full `JobCreateResponse` before the first
   poll, surfacing what the wait would otherwise swallow: input `warnings` (silent `iterations`
-  clamps / `target_error` floors — precision changes a theorycrafter must see) and the job id,
+  clamps / `target_error` floors, precision changes a theorycrafter must see) and the job id,
   so a crashed waiter can resume or cancel instead of orphaning a billing job.
 - **`onPoll` hook:** fired after each successful poll with the raw `JobStatusResponse` (progress,
-  stage, queue estimate) — progress UI without a second poller. Hook exceptions propagate and
+  stage, queue estimate), progress UI without a second poller. Hook exceptions propagate and
   abort the wait; hooks are observation points, not middleware.
 - **Transient errors while polling** retry per §6 without failing the wait; a non-retryable
   error (401, 404) propagates immediately.
 
-## 8. OpenAPI spec issues to fix upstream (pre-launch — fixes beat SDK workarounds)
+## 8. OpenAPI spec issues to fix upstream (pre-launch: fixes beat SDK workarounds)
 
-1. **No `operationId` on any operation** — blocks clean codegen and stable doc anchors. Suggest
+1. **No `operationId` on any operation**: blocks clean codegen and stable doc anchors. Suggest
    `createJob`, `getJob`, `getJobStatus`, `getJobResult`, `cancelJob`, `getCredits`, etc.
-2. **`servers[0].url` is `http://api.simmit.com`** — should be `https://`; generated clients
+2. **`servers[0].url` is `http://api.simmit.com`**: should be `https://`; generated clients
    elsewhere inherit the plaintext URL (the SDK hardcodes the https default regardless).
 3. **`error`→`message` rename: dropped as an SDK requirement.** simhammer (live consumer)
    displays `.error` verbatim, so a hard rename degrades their UX; the SDK ships against the live
    envelope as-is. If ever renamed: additive + coordinated only. Cosmetic churn isn't the SDK's call.
 4. **`code` is un-enumerated on 400, 402, 404, 410, 413.** Enumerating 413 (`request_too_large` |
-   `profile_too_large` — the latter prose-only) makes the error classes exact. (402: #11.)
+   `profile_too_large`, the latter prose-only) makes the error classes exact. (402: #11.)
 5. **`POST /v1/simc/jobs` 200 envelope, split by safety:** making `id` non-null is spec-accuracy
-   only (zero wire change — do pre-SDK so generated types don't force `job.id!` on consumers).
+   only (zero wire change: do pre-SDK so generated types don't force `job.id!` on consumers).
    Dropping `success` is a wire change that hard-breaks simhammer (required bool in their
-   deserializer) — deferred until coordinated.
-6. **`priority` enum/prose disagree — in the spec and in the docs:** schema allows `background`;
+   deserializer). Deferred until coordinated.
+6. **`priority` enum/prose disagree, in the spec and in the docs:** schema allows `background`;
    prose and the priority-fee docs discuss only `standard`/`high`. Reconcile everywhere.
 7. **No request-id response header.** Anthropic exposes `requestID` on every error for support
    escalation; Simmit has nothing to surface. Add `x-request-id` (and echo it in error bodies).
-8. Cosmetic: `bearerFormat: "Bearer"` is a no-op — the field should describe the token format.
+8. Cosmetic: `bearerFormat: "Bearer"` is a no-op. The field should describe the token format.
 9. **Webhook payload + signature scheme are docs-only.** Spec a `WebhookEvent` component schema +
    `X-Simmit-Signature` so the SDK's one hand-written wire type (§4) can be generated.
-10. **`text/plain` ingress is docs-only — keep it that way deliberately:** declare it curl-only
+10. **`text/plain` ingress is docs-only, keep it that way deliberately:** declare it curl-only
     documentation. Do not spec a second ingress contract the generated-types seam cannot see.
-11. **Enumerate the real 402 codes** — `insufficient_credits | inactive_entitlement |
-insufficient_credits_liability` — type its `priorityFeeCredits` meta (docs-prose only
+11. **Enumerate the real 402 codes**: `insufficient_credits | inactive_entitlement |
+insufficient_credits_liability`. Type its `priorityFeeCredits` meta (docs-prose only
     today), and add `webhook_not_configured` to the 400 enum.
 12. **Idempotency contract lives only in docs prose** (digest excludes `metadata`; API key +
     endpoint scope; no TTL). Fold it into the spec's `idempotency-key` parameter description.
@@ -426,9 +426,9 @@ insufficient_credits_liability` — type its `priorityFeeCredits` meta (docs-pro
 14. **`result.artifacts[].kind` is un-enumerated** (`html_report`, `json_report`, `stdout_log`
     appear only in prose). Enumerate so consumers can switch on artifact kind without guessing.
 15. **Adopt a recognizable secret-key prefix** (e.g. `smt_sk_`) and plan GitHub secret-scanning
-    registration — the name discourages misuse; the prefix lets leaked keys be detected and revoked.
+    registration: the name discourages misuse; the prefix lets leaked keys be detected and revoked.
 
-**Sequencing:** only #5's `id` non-null correction blocks implementation — it changes the
+**Sequencing:** only #5's `id` non-null correction blocks implementation. It changes the
 generated types while altering zero bytes on the wire. Everything else is post-SDK, additive, or
 coordination-gated; the SDK never requires an API behavior change. Register the `simmit` npm org
 now; §1 assumes the scope is ours.
@@ -438,15 +438,15 @@ now; §1 assumes the scope is ours.
 - **Artifact download typing** + the versioned v2/v3 report artifact: needs its own typing
   design. `artifacts.getUrl` (fetch a stable artifact URL on demand) ships in v1 alongside the
   artifact references on `jobs.getResult`; downloading and parsing the report bytes does not.
-  Artifact _selection_ (typed `kind`, stage-aware pickers) is designed in §10 for v1.x — artifact
+  Artifact _selection_ (typed `kind`, stage-aware pickers) is designed in §10 for v1.x. Artifact
   identity is `kind + stage` under multistage, not `kind` alone.
 - **`jobs.list` + pagination:** a cursor contract now exists (`limit`/`cursor` →
-  `{ jobs, page: { limit, hasMore, nextCursor, since } }`) — exclusion is a scope choice, not an
+  `{ jobs, page: { limit, hasMore, nextCursor, since } }`). Exclusion is a scope choice, not an
   API gap; the pagination idiom (Anthropic `Page` classes) lands with it.
-- **`jobs.wait(jobId)`:** small, additive, v1.x. (`jobs.getStatus` ships in v1 — see §4.)
+- **`jobs.wait(jobId)`:** small, additive, v1.x. (`jobs.getStatus` ships in v1, see §4.)
 - **Builds & usage endpoints:** read-mostly metadata, additive later. Named gap: the docs'
-  bundled-profiles best practice depends on excluded `GET /v1/simc/builds` — hand-rolled until v1.x.
-- **Plain-text submission** (`text/plain`): the SDK is JSON-only — the generated-types seam
+  bundled-profiles best practice depends on excluded `GET /v1/simc/builds`. Hand-rolled until v1.x.
+- **Plain-text submission** (`text/plain`): the SDK is JSON-only. The generated-types seam
   cannot see the docs-only contract (§8.10). Migration map: raw body → `profile.text`; query
   params (`channel`, `multiStage`, …) → envelope fields; `X-Bnet-*` headers → `credentials`.
 - **Progress/log streaming** (`include=logEntries`, beyond `onPoll`): API-shape risk; later.
@@ -461,10 +461,10 @@ now; §1 assumes the scope is ours.
 
 `jobs.getResult()` exposes the artifact list at `result.result.artifacts`. Picking "the JSON
 report" or "the final-stage HTML" is fiddly enough that integrators get it wrong, so the SDK owns
-the **taxonomy** and **selection** — but not persistence (storage paths, `kind`→DB mapping, and
+the **taxonomy** and **selection**, but not persistence (storage paths, `kind`→DB mapping, and
 critical-vs-background ordering stay the caller's).
 
-Types — the seam derives `Artifact` from the generated result and widens `kind` to a
+Types. The seam derives `Artifact` from the generated result and widens `kind` to a
 forward-compatible union:
 
 ```ts
@@ -475,33 +475,33 @@ export type ArtifactKind =
   | 'html_report'
   | 'stdout_log'
   | 'stderr_log'
-  | (string & {}) // open union — a new server kind widens, never breaks, the type
+  | (string & {}) // open union: a new server kind widens, never breaks, the type
 ```
 
-Selectors — pure free functions (no request; the result stays the plain generated record). They
+Selectors. Pure free functions (no request; the result stays the plain generated record). They
 also hide the `result.result.artifacts` nesting:
 
-- <code>selectArtifact(result, kind) -> Artifact | undefined</code> — the canonical artifact of
+- <code>selectArtifact(result, kind) -> Artifact | undefined</code>, the canonical artifact of
   `kind`: the entry with the greatest `stage` (`null` treated as lowest), else `undefined`.
-- <code>selectArtifacts(result, kind) -> Artifact[]</code> — every artifact of `kind`, ascending
+- <code>selectArtifacts(result, kind) -> Artifact[]</code>, every artifact of `kind`, ascending
   by `stage`.
 
-Selection is **per-kind on purpose.** A global `max(stage)` filter — the obvious hand-rolled
-approach — drops a `stage: null` `json_report` when another kind reaches a higher stage;
-`selectArtifact` never does — encoding that is the helper's reason to exist (without it, it would
+Selection is **per-kind on purpose.** A global `max(stage)` filter (the obvious hand-rolled
+approach) drops a `stage: null` `json_report` when another kind reaches a higher stage;
+`selectArtifact` never does. Encoding that is the helper's reason to exist (without it, it would
 be gratuitous sugar).
 
-Stage semantics — the contract states `stage` is `null` for single-run / not-stage-specific
+Stage semantics. The contract states `stage` is `null` for single-run / not-stage-specific
 artifacts and 1-indexed for multistage. **Open question to pin before shipping:** is the highest
 stage always the canonical/final artifact of a kind, and does each stage emit its own
 `json_report`/logs or only the final? `selectArtifact`'s null-as-lowest rule assumes highest =
-canonical — confirm upstream and state it here.
+canonical. Confirm upstream and state it here.
 
 `mimeType` is already typed and non-null; consume it directly, never derive a content type from
 `kind`. Keeping it accurate is an API-side guarantee, not an SDK concern.
 
-Prerequisites (upstream): enumerate `kind` in the spec (§8.14) so the generated union is exact —
-until then `ArtifactKind` degrades to `string` and the selectors still work — and document the
+Prerequisites (upstream): enumerate `kind` in the spec (§8.14) so the generated union is exact
+(until then `ArtifactKind` degrades to `string` and the selectors still work) and document the
 stage canonical-ness above. Still excluded (as in §9): downloading/parsing the report bytes and
 the versioned v2/v3 report schema.
 
@@ -523,7 +523,7 @@ rev 2.1 → rev 2.2 (web-integrator audit):
 
 rev 2 → rev 2.1 (simhammer live-consumer audit):
 
-- §8.3 (`error`→`message`) dropped as an SDK requirement — simhammer displays `.error`; rename
+- §8.3 (`error`→`message`) dropped as an SDK requirement: simhammer displays `.error`; rename
   only ever additive + coordinated. §8.5 split: `id` non-null stays pre-SDK (zero wire change);
   `success` removal deferred (hard-breaks simhammer). SDK never requires API behavior changes.
 
