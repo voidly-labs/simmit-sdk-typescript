@@ -29,7 +29,7 @@ export interface RequestSpec {
   idempotent?: boolean
 }
 
-// Retry policy constants (DESIGN §6) — typed code config, not env.
+// Retry policy constants — typed code config, not env.
 const INITIAL_BACKOFF_MS = 500
 const MAX_BACKOFF_MS = 8_000
 const MAX_RETRY_AFTER_MS = 60_000
@@ -174,7 +174,7 @@ function buildHeaders(
     ...(idempotent && !options.idempotencyKey
       ? {
           // Generated once per call and reused across retry attempts — that
-          // is what makes POST retries safe by default (DESIGN §6). The auto
+          // is what makes POST retries safe by default. The auto
           // key is an SDK built-in default (lowest tier), so defaultHeaders
           // may override it.
           'idempotency-key': `simmit-node-retry-${crypto.randomUUID()}`
@@ -184,7 +184,7 @@ function buildHeaders(
     ...(idempotent && options.idempotencyKey
       ? {
           // An explicit key is a per-request option: it must beat constructor
-          // defaultHeaders (DESIGN §3). Raw options.headers still wins last.
+          // defaultHeaders. Raw options.headers still wins last.
           'idempotency-key': options.idempotencyKey
         }
       : {}),
@@ -193,7 +193,7 @@ function buildHeaders(
 
   const headers: Record<string, string> = {}
   for (const [key, value] of Object.entries(merged)) {
-    // A null value deletes the header (DESIGN §3); undefined entries are skipped.
+    // A null value deletes the header; undefined entries are skipped.
     if (typeof value === 'string') headers[key] = value
   }
   return headers
@@ -211,7 +211,7 @@ function lowercaseKeys(
 function shouldRetryStatus(status: number): boolean {
   // 408 kept defensively even though the API never emits it. 409 is never
   // retried: result_not_ready is thrown immediately by design and the other
-  // 409s are deterministic (DESIGN §6).
+  // 409s are deterministic.
   return status === 408 || status === 429 || status >= 500
 }
 
@@ -229,7 +229,7 @@ async function backoff(
   await sleep(delay, signal)
 }
 
-/** Accepts `Retry-After` only when it parses to a delay in (0, 60s] — the SDK never sleeps arbitrarily long on a server hint (DESIGN §6). */
+/** Accepts `Retry-After` only when it parses to a delay in (0, 60s] — the SDK never sleeps arbitrarily long on a server hint. */
 function parseRetryAfter(
   header: string | null | undefined
 ): number | undefined {
