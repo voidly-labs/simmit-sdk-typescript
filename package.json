@@ -1,7 +1,7 @@
 {
   "name": "@simmit/sdk",
   "version": "0.1.0",
-  "description": "TypeScript SDK for the Simmit API — cloud execution for SimulationCraft",
+  "description": "TypeScript SDK for Simmit, an API for running SimulationCraft (SimC) in the cloud",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -52,8 +52,12 @@
     "simulationcraft",
     "simc",
     "wow",
+    "world-of-warcraft",
+    "dps",
+    "simulation",
     "sdk",
-    "api-client"
+    "api-client",
+    "cloud"
   ],
   "author": "Voidly Labs",
   "repository": {
