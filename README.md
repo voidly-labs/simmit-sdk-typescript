@@ -154,7 +154,8 @@ if (event.payload.status === 'completed') {
 - Node 20+ (`.nvmrc` pins the dev version), pnpm.
 - `pnpm generate` — regenerate `src/generated/openapi.d.ts` from the committed `openapi.json` snapshot. Never hand-edit generated output; only `src/api-types.ts` may import from `src/generated/`.
 - `pnpm build` — dual ESM+CJS via tsup.
-- `pnpm test` — vitest.
+- `pnpm test` — vitest (hermetic; mocks `fetch`, no network).
+- `pnpm smoke` — manual check against a real API (needs `SIMMIT_SECRET_KEY`; set `SIMMIT_PROFILE_FILE` to also run a full create→result, or `TEST_API_BASE_URL` to target a non-prod endpoint). See `scripts/smoke.mjs`.
 
 ## License
 
