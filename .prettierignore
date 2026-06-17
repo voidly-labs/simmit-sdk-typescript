@@ -2,3 +2,6 @@ dist/
 src/generated/
 openapi.json
 pnpm-lock.yaml
+
+# release-please owns CHANGELOG.md's format
+CHANGELOG.md
