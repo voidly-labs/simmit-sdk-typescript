@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.1.1...v0.2.0) (2026-06-18)
+
+
+### Features
+
+* add isTerminal and isCompleted status guards ([#35](https://github.com/voidly-labs/simmit-sdk-typescript/issues/35)) ([a845e78](https://github.com/voidly-labs/simmit-sdk-typescript/commit/a845e786b21c836476124a129bf02fe66e175082))
+
 ## [0.1.1](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.1.0...v0.1.1) (2026-06-17)
 
 
