@@ -147,6 +147,77 @@ if (event.payload.status === 'completed') {
 }
 ```
 
+## Using the SDK in a web app
+
+The SDK is server-side only: the secret key spends credits and must never reach
+the browser. A typical web flow submits a job on one request, persists the
+returned id, and reads the result on a later request. A `job.terminal` webhook
+(above) is the reliable completion signal.
+
+### Construct the client lazily
+
+`new Simmit()` throws when no secret key is set. Frameworks that evaluate route
+modules at build time (Next.js, Remix, SvelteKit) run that code with no
+environment, so a top-level `new Simmit()` breaks the build. Construct it lazily
+so the key is read at first use, on a real request:
+
+```ts
+// lib/simmit.ts
+import 'server-only'
+import Simmit from '@simmit/sdk'
+
+let client: Simmit | undefined
+
+export function simmit(): Simmit {
+  return (client ??= new Simmit())
+}
+```
+
+The `server-only` import fails the build if this module is ever pulled into a
+client component.
+
+### Make submit idempotent
+
+`jobs.create` attaches a fresh idempotency key per call, which keeps the SDK's
+own retries safe. It does not cover a user double-clicking submit: that is two
+calls, and two billed jobs. Pass a stable key (for example a per-render form
+nonce) so the second submit replays the first job instead of creating another:
+
+```ts
+await simmit().jobs.create(params, { idempotencyKey: formNonce })
+```
+
+### Branch on the result
+
+Use `isTerminal` to tell whether the job is still running, and `isCompleted` to
+narrow a finished job to `CompletedJob` before reading its result:
+
+```ts
+import { isCompleted, isTerminal } from '@simmit/sdk'
+import { simmit } from '@/lib/simmit'
+
+const job = await simmit().jobs.get(id)
+
+if (!isTerminal(job.status)) {
+  // still running: send the caller back to a progress view
+  return
+}
+
+if (!isCompleted(job)) {
+  // terminal but not successful: 'failed' | 'cancelled' | 'timed_out'
+  console.error(job.statusReason)
+  return
+}
+
+// job is CompletedJob here
+const { result } = await simmit().jobs.getResult(job.id)
+const actor = result.summary?.mainActor
+// mainActor is null for a completed run with no single headline actor (a
+// profileset-only or multi-player sim keeps per-actor numbers in the JSON
+// artifact), so guard it even on success.
+const dps = actor ? Math.round(actor.mean) : null
+```
+
 ## Development
 
 - Node 20+ (`.nvmrc` pins the dev version), pnpm.
