@@ -12,3 +12,6 @@ export type { Artifacts } from './resources/artifacts'
 // Standalone webhook verification: no client (and no secret key) required.
 export { unwrapWebhook } from './webhook'
 export type { WebhookEvent } from './webhook'
+// Status predicates: pure, no client required.
+export { isCompleted, isTerminal, TERMINAL_JOB_STATUSES } from './status'
+export type { TerminalJobStatus } from './status'

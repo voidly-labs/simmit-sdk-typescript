@@ -119,7 +119,7 @@ compose: first to fire aborts (timeout → `APIConnectionTimeoutError`, retryabl
 ## 4. Resources and method signatures
 
 `api.md`-style listing. Types: `Job` · `JobCreateParams` · `JobCreateResponse` · `JobStatus` ·
-`JobErrorCode` · `CompletedJob` · `JobResult` · `JobStatusResponse` · `JobCancelResponse` ·
+`TerminalJobStatus` · `JobErrorCode` · `CompletedJob` · `JobResult` · `JobStatusResponse` · `JobCancelResponse` ·
 `CreditBalance` · `CreditGrant` · `ArtifactUrl` · `Artifact` · `ArtifactKind`
 
 - <code title="post /v1/simc/jobs">client.jobs.create({ ...params }, options?) -> JobCreateResponse</code>
@@ -130,6 +130,12 @@ compose: first to fire aborts (timeout → `APIConnectionTimeoutError`, retryabl
 - <code title="post /v1/simc/jobs/{id}/cancel">client.jobs.cancel(jobId, options?) -> JobCancelResponse</code>
 - <code title="get /v1/simc/credits">client.credits.get(options?) -> CreditBalance</code>
 - <code title="get /v1/simc/artifacts/{id}/url">client.artifacts.getUrl(artifactId, options?) -> ArtifactUrl</code>
+
+Standalone status predicates (pure, no client; for the decoupled and webhook flows where consumers branch on a job's state):
+
+- <code>isTerminal(status: JobStatus) -> status is TerminalJobStatus</code>: the job reached an end state and stopped.
+- <code>isCompleted(job: Job) -> job is CompletedJob</code>: the job succeeded; narrows for `getResult`. Terminal but not completed means `failed`/`cancelled`/`timed_out`, which carry no result.
+- <code>TERMINAL_JOB_STATUSES</code>: the readonly array backing `isTerminal`, kept in sync with `JobStatus` at compile time.
 
 ```ts
 export class Jobs {

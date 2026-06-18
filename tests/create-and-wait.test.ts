@@ -9,11 +9,11 @@ import {
 } from '../src/error'
 import {
   deriveWaitTimeoutMs,
-  isTerminal,
   MAX_POLL_INTERVAL_MS,
   MIN_POLL_INTERVAL_MS,
   nextPollInterval
 } from '../src/internal/poll'
+import { isTerminal } from '../src/status'
 import type {
   JobCreateParams,
   JobCreateResponse,
