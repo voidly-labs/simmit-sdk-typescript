@@ -131,11 +131,12 @@ compose: first to fire aborts (timeout → `APIConnectionTimeoutError`, retryabl
 - <code title="get /v1/simc/credits">client.credits.get(options?) -> CreditBalance</code>
 - <code title="get /v1/simc/artifacts/{id}/url">client.artifacts.getUrl(artifactId, options?) -> ArtifactUrl</code>
 
-Standalone status predicates (pure, no client; for the decoupled and webhook flows where consumers branch on a job's state):
+Standalone status helpers (pure, no client; for the decoupled and webhook flows where consumers branch on a job's state):
 
-- <code>isTerminal(status: JobStatus) -> status is TerminalJobStatus</code>: the job reached an end state and stopped.
-- <code>isCompleted(job: Job) -> job is CompletedJob</code>: the job succeeded; narrows for `getResult`. Terminal but not completed means `failed`/`cancelled`/`timed_out`, which carry no result.
+- <code>isTerminal(status: JobStatus) -> status is TerminalJobStatus</code>: the job reached an end state and stopped. There is no clean inline check for the four-state set, which is why this is a helper.
 - <code>TERMINAL_JOB_STATUSES</code>: the readonly array backing `isTerminal`, kept in sync with `JobStatus` at compile time.
+
+The success branch needs no helper: `job.status === 'completed'` already narrows a `Job` to `CompletedJob`.
 
 ```ts
 export class Jobs {

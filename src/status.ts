@@ -1,4 +1,4 @@
-import type { CompletedJob, Job, JobStatus } from './api-types'
+import type { JobStatus } from './api-types'
 
 /**
  * Job statuses that are terminal: a job in one of these has stopped and will
@@ -18,12 +18,4 @@ export type TerminalJobStatus = (typeof TERMINAL_JOB_STATUSES)[number]
 /** True when `status` is terminal, i.e. the job has reached an end state. */
 export function isTerminal(status: JobStatus): status is TerminalJobStatus {
   return (TERMINAL_JOB_STATUSES as readonly JobStatus[]).includes(status)
-}
-
-/**
- * True when the job completed successfully, narrowing it to `CompletedJob` so
- * the success path (e.g. `jobs.getResult`) is reachable without a status check.
- */
-export function isCompleted(job: Job): job is CompletedJob {
-  return job.status === 'completed'
 }
