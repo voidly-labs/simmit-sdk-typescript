@@ -19,6 +19,8 @@ Node 20+. Zero runtime dependencies (global `fetch` and WebCrypto only).
 
 ## Usage
 
+A Simmit **job** is one SimC run: you submit a profile, Simmit queues and runs it in the cloud, and you fetch the result when it's done.
+
 ```ts
 import Simmit from '@simmit/sdk'
 
