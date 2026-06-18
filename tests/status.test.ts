@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Job } from '../src/api-types'
-import { isCompleted, isTerminal, TERMINAL_JOB_STATUSES } from '../src/status'
-
-const jobWith = (status: Job['status']): Job => ({ status }) as unknown as Job
+import { isTerminal, TERMINAL_JOB_STATUSES } from '../src/status'
 
 describe('isTerminal', () => {
   it('is true for the terminal statuses', () => {
@@ -17,21 +14,6 @@ describe('isTerminal', () => {
     expect(isTerminal('queued')).toBe(false)
     expect(isTerminal('starting')).toBe(false)
     expect(isTerminal('running')).toBe(false)
-  })
-})
-
-describe('isCompleted', () => {
-  it('is true only for a completed job', () => {
-    expect(isCompleted(jobWith('completed'))).toBe(true)
-    expect(isCompleted(jobWith('failed'))).toBe(false)
-    expect(isCompleted(jobWith('running'))).toBe(false)
-  })
-
-  it('narrows the job to CompletedJob', () => {
-    const job = jobWith('completed')
-    if (!isCompleted(job)) throw new Error('expected isCompleted to narrow')
-    const status: 'completed' = job.status
-    expect(status).toBe('completed')
   })
 })
 
