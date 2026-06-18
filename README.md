@@ -189,11 +189,12 @@ await simmit().jobs.create(params, { idempotencyKey: formNonce })
 
 ### Branch on the result
 
-Use `isTerminal` to tell whether the job is still running, and `isCompleted` to
-narrow a finished job to `CompletedJob` before reading its result:
+Use `isTerminal` to tell whether the job is still running. A plain
+`job.status === 'completed'` check narrows a finished job to `CompletedJob`
+before you read its result:
 
 ```ts
-import { isCompleted, isTerminal } from '@simmit/sdk'
+import { isTerminal } from '@simmit/sdk'
 import { simmit } from '@/lib/simmit'
 
 const job = await simmit().jobs.get(id)
@@ -203,13 +204,13 @@ if (!isTerminal(job.status)) {
   return
 }
 
-if (!isCompleted(job)) {
+if (job.status !== 'completed') {
   // terminal but not successful: 'failed' | 'cancelled' | 'timed_out'
   console.error(job.statusReason)
   return
 }
 
-// job is CompletedJob here
+// job is CompletedJob here (=== 'completed' narrowed it)
 const { result } = await simmit().jobs.getResult(job.id)
 const actor = result.summary?.mainActor
 // mainActor is null for a completed run with no single headline actor (a
