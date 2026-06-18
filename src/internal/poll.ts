@@ -1,6 +1,6 @@
 // Pure helpers for the createAndWait poll loop. Kept separate from the
 // orchestration so the cadence and deadline math are unit-testable.
-import type { JobCreateResponse, JobStatus } from '../api-types'
+import type { JobCreateResponse } from '../api-types'
 
 export const MIN_POLL_INTERVAL_MS = 100
 export const DEFAULT_POLL_INTERVAL_MS = 1_000
@@ -8,17 +8,6 @@ export const MAX_POLL_INTERVAL_MS = 10_000
 export const POLL_BACKOFF_FACTOR = 1.5
 const DEADLINE_GRACE_MS = 60_000
 const FALLBACK_WAIT_TIMEOUT_MS = 45 * 60 * 1_000
-
-const TERMINAL_STATUSES = new Set<JobStatus>([
-  'completed',
-  'failed',
-  'cancelled',
-  'timed_out'
-])
-
-export function isTerminal(status: JobStatus): boolean {
-  return TERMINAL_STATUSES.has(status)
-}
 
 /**
  * Default wait deadline derived from the applied ceilings the create response

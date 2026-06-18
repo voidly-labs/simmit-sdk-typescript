@@ -21,10 +21,10 @@ import { sleep } from '../internal/abort'
 import {
   DEFAULT_POLL_INTERVAL_MS,
   deriveWaitTimeoutMs,
-  isTerminal,
   MIN_POLL_INTERVAL_MS,
   nextPollInterval
 } from '../internal/poll'
+import { isTerminal } from '../status'
 
 export interface JobWaitOptions extends RequestOptions {
   /** Initial delay between status polls, ms. Grows ×1.5 per poll to a 10s cap; values under 100 are raised to it. Default 1_000. */
