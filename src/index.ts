@@ -10,8 +10,8 @@ export type { Jobs, JobWaitOptions } from './resources/jobs'
 export type { Credits } from './resources/credits'
 export type { Artifacts } from './resources/artifacts'
 // Standalone webhook verification: no client (and no secret key) required.
+// WebhookEvent is exported from api-types, derived from the spec schema.
 export { unwrapWebhook } from './webhook'
-export type { WebhookEvent } from './webhook'
 // Status helpers: pure, no client required.
 export { isTerminal, TERMINAL_JOB_STATUSES } from './status'
 export type { TerminalJobStatus } from './status'

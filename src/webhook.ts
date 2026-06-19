@@ -1,25 +1,10 @@
 // Standalone webhook verification. Not a client method: receivers must not
 // need a secret-key-bearing client (whose constructor throws without a key).
 // WebCrypto only, zero deps, and runs in Workers as well as Node.
-import type { JobStatus } from './api-types'
+import type { WebhookEvent } from './api-types'
 import { WebhookVerificationError } from './error'
 
 const DEFAULT_TOLERANCE_SECONDS = 300
-
-/** The one hand-written wire type: the webhook payload has no OpenAPI schema. */
-export interface WebhookEvent {
-  kind: 'job.terminal'
-  version: 'v1'
-  timestamp: string
-  payload: {
-    id: string
-    statusReason: string | null
-    status: Extract<
-      JobStatus,
-      'completed' | 'failed' | 'cancelled' | 'timed_out'
-    >
-  }
-}
 
 /**
  * Verifies an `X-Simmit-Signature` header (`t=<unix>,v1=<hex>`, an HMAC-SHA256

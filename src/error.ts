@@ -22,6 +22,7 @@ interface ErrorEnvelope {
   error?: unknown
   code?: unknown
   meta?: unknown
+  requestId?: unknown
 }
 
 export class APIError<
@@ -55,6 +56,18 @@ export class APIError<
       typeof envelope?.code === 'string' ? envelope.code : undefined
     ) as TCode
     this.meta = (body ? (envelope?.meta ?? null) : undefined) as TMeta
+  }
+
+  /**
+   * Correlation id for the failed request (`req_...`), for support tickets.
+   * Read from the `X-Request-Id` response header, falling back to the body's
+   * `requestId` field.
+   */
+  get requestId(): string | undefined {
+    const fromHeader = this.headers?.get('x-request-id')
+    if (fromHeader) return fromHeader
+    const { requestId } = (this.error ?? {}) as ErrorEnvelope
+    return typeof requestId === 'string' ? requestId : undefined
   }
 
   private static makeMessage(
