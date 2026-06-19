@@ -1,4 +1,4 @@
-# Simmit TypeScript SDK: v1 Design (revision 2.3)
+# Simmit TypeScript SDK: v1 Design (revision 2.4)
 
 Scope: public surface and foundations only, a design proposal, not an implementation.
 Convention reference: `anthropic-sdk-typescript`; where this doc is silent, that SDK's idiom is
@@ -24,7 +24,7 @@ simmit-sdk/
     ├── client.ts                 # Simmit class, ClientOptions, RequestOptions
     ├── api-promise.ts            # APIPromise<T> (§4)
     ├── error.ts                  # full error hierarchy (§5)
-    ├── webhook.ts                # standalone unwrapWebhook + WebhookEvent (§4); WebCrypto only
+    ├── webhook.ts                # standalone unwrapWebhook (§4); WebCrypto only
     ├── api-types.ts              # handwritten public aliases over generated types (the seam)
     ├── resources/                # jobs.ts, credits.ts
     ├── internal/                 # not exported: request layer, retry/backoff, idempotency, polling
@@ -56,7 +56,7 @@ export type CreditGrant = CreditBalance['grants'][number]
 ```
 
 Swapping the generator later means rewriting `api-types.ts` only; nothing else sees its shapes.
-`WebhookEvent` (§4) is the one hand-written wire type. The spec has no webhook schema (§8.9).
+`WebhookEvent` (§4) is derived from the spec's schema (added upstream in 1.2.0, §8.9), so there are no hand-written wire types.
 Publishing: tsup → `dist/`, `exports` map (ESM+CJS+`.d.ts`), `engines.node: ">=20"`, `sideEffects: false`.
 
 ## 2. Client constructor
@@ -120,7 +120,7 @@ compose: first to fire aborts (timeout → `APIConnectionTimeoutError`, retryabl
 
 `api.md`-style listing. Types: `Job` · `JobCreateParams` · `JobCreateResponse` · `JobStatus` ·
 `TerminalJobStatus` · `JobErrorCode` · `CompletedJob` · `JobResult` · `JobStatusResponse` · `JobCancelResponse` ·
-`CreditBalance` · `CreditGrant` · `ArtifactUrl` · `Artifact` · `ArtifactKind`
+`CreditBalance` · `CreditGrant` · `ArtifactUrl` · `Artifact` · `ArtifactKind` · `ArtifactMimeType` · `WebhookEvent`
 
 - <code title="post /v1/simc/jobs">client.jobs.create({ ...params }, options?) -> JobCreateResponse</code>
 - <code title="get /v1/simc/jobs/{id}">client.jobs.get(jobId, options?) -> Job</code>
@@ -229,31 +229,23 @@ export function unwrapWebhook(
   options?: { toleranceSeconds?: number }
 ): Promise<WebhookEvent>
 
-export interface WebhookEvent {
-  kind: 'job.terminal'
-  version: 'v1'
-  timestamp: string
-  payload: {
-    id: string
-    statusReason: string | null
-    status: Extract<
-      JobStatus,
-      'completed' | 'failed' | 'cancelled' | 'timed_out'
-    >
-  }
-}
+// Derived from the spec (components['schemas']['WebhookEvent'], added in 1.2.0).
+// Shape: { kind: 'job.terminal'; version: 'v1'; timestamp: string;
+//   payload: { id: string; statusReason: string | null;
+//     status: 'completed' | 'failed' | 'cancelled' | 'timed_out' } }
+export type WebhookEvent = components['schemas']['WebhookEvent']
 ```
 
 ## 5. Error taxonomy
 
-The API's error envelope is uniformly `{ error: string; code: string; meta: object | null }`.
+The API's error envelope is uniformly `{ error: string; code: string; meta: object | null; requestId: string }`.
 Hierarchy mirrors Anthropic's `core/error.ts` (status classes, `APIError.generate` factory), with
 code-based subclasses only where a `code` is enumerated with structured `meta`. Every class pins
 `status`/`code`/`meta` to narrow types: no `unknown` bags; un-enumerated `code`s are `string`, flagged in §8.
 
 ```
 SimmitError extends Error
-├── APIError<TStatus, TCode, TMeta>        .status .headers .code .meta .error (raw body)
+├── APIError<TStatus, TCode, TMeta>        .status .headers .code .meta .error (raw body) .requestId
 │   ├── BadRequestError                    400 · code: string · meta: GenericMeta | null
 │   ├── AuthenticationError                401 · code: 'missing_token' | 'invalid_token' | 'revoked_token' | 'expired_token'
 │   ├── BillingError                       402 · code union; 'inactive_entitlement' stays on base (§8.11)
@@ -292,6 +284,7 @@ export class APIError<...> extends SimmitError {
   readonly code: TCode
   readonly meta: TMeta
   readonly error: object | undefined // raw parsed body, Anthropic-style escape hatch
+  get requestId(): string | undefined // X-Request-Id header, else body.requestId (§8.7)
   static generate(status, body, message, headers): APIError // status+code → subclass
 }
 
@@ -401,6 +394,8 @@ the full record → return or throw.
 
 ## 8. OpenAPI spec issues to fix upstream (pre-launch: fixes beat SDK workarounds)
 
+**Shipped in API 1.2.0 (adopted in rev 2.4):** #1 operationIds (no SDK change; types key on path+method), #7 `x-request-id` header + `requestId` error field (now `APIError.requestId`), #9 `WebhookEvent` component (type now derived), #14 `kind`/`mimeType` enums.
+
 1. **No `operationId` on any operation**: blocks clean codegen and stable doc anchors. Suggest
    `createJob`, `getJob`, `getJobStatus`, `getJobResult`, `cancelJob`, `getCredits`, etc.
 2. **`servers[0].url` is `http://api.simmit.com`**: should be `https://`; generated clients
@@ -471,18 +466,16 @@ report" or "the final-stage HTML" is fiddly enough that integrators get it wrong
 the **taxonomy** and **selection**, but not persistence (storage paths, `kind`→DB mapping, and
 critical-vs-background ordering stay the caller's).
 
-Types. The seam derives `Artifact` from the generated result and widens `kind` to a
-forward-compatible union:
+Types (shipped in v1). The seam derives them from the generated result; `kind` and `mimeType`
+are closed enums (the spec enumerated both in 1.2.0, §8.14):
 
 ```ts
-export type Artifact = JobResult['result']['artifacts'][number]
-//   { id: string; url: string; kind: ArtifactKind; mimeType: string; stage: number | null }
-export type ArtifactKind =
-  | 'json_report'
-  | 'html_report'
-  | 'stdout_log'
-  | 'stderr_log'
-  | (string & {}) // open union: a new server kind widens, never breaks, the type
+export type Artifact = NonNullable<JobResult['result']>['artifacts'][number]
+//   { id: string; url: string; kind: ArtifactKind; mimeType: ArtifactMimeType; stage: number | null }
+export type ArtifactKind = Artifact['kind']
+//   'html_report' | 'json_report' | 'input' | 'stdout_log' | 'stderr_log'
+export type ArtifactMimeType = Artifact['mimeType']
+//   'application/json' | 'text/html' | 'text/plain'
 ```
 
 Selectors. Pure free functions (no request; the result stays the plain generated record). They
@@ -507,12 +500,18 @@ canonical. Confirm upstream and state it here.
 `mimeType` is already typed and non-null; consume it directly, never derive a content type from
 `kind`. Keeping it accurate is an API-side guarantee, not an SDK concern.
 
-Prerequisites (upstream): enumerate `kind` in the spec (§8.14) so the generated union is exact
-(until then `ArtifactKind` degrades to `string` and the selectors still work) and document the
-stage canonical-ness above. Still excluded (as in §9): downloading/parsing the report bytes and
-the versioned v2/v3 report schema.
+Prerequisites (upstream): `kind` is now enumerated in the spec (§8.14, shipped in 1.2.0), so
+`ArtifactKind` is exact. The remaining gate is documenting the stage canonical-ness above. Still
+excluded (as in §9): downloading/parsing the report bytes and the versioned v2/v3 report schema.
 
 ## CHANGELOG
+
+rev 2.3 → rev 2.4 (API 1.2.0 adoption):
+
+- Re-vendored the spec (1.1.0 → 1.2.0) and regenerated. `WebhookEvent` now derives from the
+  spec component (was the one hand-written wire type). `APIError.requestId` surfaces the
+  `x-request-id` header / `requestId` error field. `Artifact`/`ArtifactKind`/`ArtifactMimeType`
+  exported as closed enums. §8 items 1/7/9/14 shipped upstream.
 
 rev 2.2 → rev 2.3 (artifact-selection design):
 

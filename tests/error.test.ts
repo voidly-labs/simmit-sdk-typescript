@@ -144,6 +144,37 @@ describe('typed meta', () => {
   })
 })
 
+describe('requestId', () => {
+  it('reads the X-Request-Id response header', () => {
+    const h = new Headers({ 'x-request-id': 'req_header' })
+    const err = APIError.generate(500, envelope('internal'), undefined, h)
+    expect(err.requestId).toBe('req_header')
+  })
+
+  it('falls back to the body requestId when the header is absent', () => {
+    const err = generate(500, {
+      ...envelope('internal'),
+      requestId: 'req_body'
+    })
+    expect(err.requestId).toBe('req_body')
+  })
+
+  it('prefers the header over the body requestId', () => {
+    const h = new Headers({ 'x-request-id': 'req_header' })
+    const err = APIError.generate(
+      500,
+      { ...envelope('internal'), requestId: 'req_body' },
+      undefined,
+      h
+    )
+    expect(err.requestId).toBe('req_header')
+  })
+
+  it('is undefined when neither header nor body carries it', () => {
+    expect(generate(500, envelope('internal')).requestId).toBeUndefined()
+  })
+})
+
 describe('503 handling', () => {
   it('returns ServiceUnavailableError with a narrowable body for enumerated codes', () => {
     const err = generate(
