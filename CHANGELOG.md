@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.2.0...v0.3.0) (2026-06-19)
+
+
+### Features
+
+* adopt API 1.2.0 spec (requestId, WebhookEvent, artifact enums) ([#42](https://github.com/voidly-labs/simmit-sdk-typescript/issues/42)) ([7615fb4](https://github.com/voidly-labs/simmit-sdk-typescript/commit/7615fb4e4a153f54d38cfc181f21b69d51898f30))
+
 ## [0.2.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.1.1...v0.2.0) (2026-06-18)
 
 
