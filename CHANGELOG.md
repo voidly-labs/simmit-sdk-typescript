@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.3.0...v0.4.0) (2026-06-21)
+
+
+### Features
+
+* surface queue.queuedAt on the status response ([#44](https://github.com/voidly-labs/simmit-sdk-typescript/issues/44)) ([474d56c](https://github.com/voidly-labs/simmit-sdk-typescript/commit/474d56c63ca914a91d18a2e1031242faea799a34))
+
 ## [0.3.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.2.0...v0.3.0) (2026-06-19)
 
 
