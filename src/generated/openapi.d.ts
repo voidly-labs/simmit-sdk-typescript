@@ -1540,6 +1540,11 @@ export interface operations {
                         /** @description SimC process exit code. Null when the job is not terminal. */
                         simcExitCode: string | null;
                         queue: {
+                            /**
+                             * Format: date-time
+                             * @description When this job entered the queue. For a retried job, this reflects the current attempt, not the original submission.
+                             */
+                            queuedAt: string;
                             /** @description Estimated seconds until this job begins running. Updated on each poll; not a guarantee. Null when no estimate is available. */
                             estimatedStartSeconds: number | null;
                             /**
