@@ -9,6 +9,7 @@ export type * from './api-types'
 export type { Jobs, JobWaitOptions } from './resources/jobs'
 export type { Credits } from './resources/credits'
 export type { Artifacts } from './resources/artifacts'
+export type { Usage } from './resources/usage'
 // Standalone webhook verification: no client (and no secret key) required.
 // WebhookEvent is exported from api-types, derived from the spec schema.
 export { unwrapWebhook } from './webhook'
