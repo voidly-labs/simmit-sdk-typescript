@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.4.0...v0.5.0) (2026-06-29)
+
+
+### Features
+
+* add usage resource (concurrency limits, maxActiveJobs) ([#47](https://github.com/voidly-labs/simmit-sdk-typescript/issues/47)) ([dd88058](https://github.com/voidly-labs/simmit-sdk-typescript/commit/dd880589e22e250dc76b76ea80de843ce661ec81))
+
 ## [0.4.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.3.0...v0.4.0) (2026-06-21)
 
 
