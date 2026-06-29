@@ -121,6 +121,19 @@ describe('resource → _request wiring', () => {
     expect(out).toBe(sentinel)
   })
 
+  it('usage.get → GET /v1/simc/usage', () => {
+    const client = makeClient()
+    const { spy, sentinel } = spyRequest(client)
+
+    const out = client.usage.get()
+
+    expect(spy).toHaveBeenCalledWith(
+      { method: 'GET', path: '/v1/simc/usage' },
+      undefined
+    )
+    expect(out).toBe(sentinel)
+  })
+
   it('encodes the job id into the path', () => {
     const client = makeClient()
     const { spy } = spyRequest(client)
@@ -151,6 +164,36 @@ describe('jobs.getStatus (end to end)', () => {
     expect(url).toBe(
       'https://api.simmit.com/v1/simc/jobs/519253542012420096/status'
     )
+    expect(init.method).toBe('GET')
+  })
+})
+
+describe('usage.get (end to end)', () => {
+  it('returns the account limits and in-flight snapshot', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          period: {
+            avgRuntimeSeconds: 12,
+            readsUsed: 3,
+            readsLimit: null,
+            readsCapResetAt: null
+          },
+          snapshot: { activeJobs: 2, queuedJobs: 1, runningJobs: 1 },
+          limits: { maxActiveJobs: 5 }
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      )
+    )
+    const client = new Simmit({ secretKey: 'smt_sk_test', fetch: fetchMock })
+
+    const usage = await client.usage.get()
+
+    expect(usage.limits.maxActiveJobs).toBe(5)
+    expect(usage.snapshot.activeJobs).toBe(2)
+    expect(usage.period.avgRuntimeSeconds).toBe(12)
+    const [url, init] = fetchMock.mock.calls[0]!
+    expect(url).toBe('https://api.simmit.com/v1/simc/usage')
     expect(init.method).toBe('GET')
   })
 })

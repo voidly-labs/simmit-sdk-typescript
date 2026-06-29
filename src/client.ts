@@ -8,6 +8,7 @@ import {
 import { Artifacts } from './resources/artifacts'
 import { Credits } from './resources/credits'
 import { Jobs } from './resources/jobs'
+import { Usage } from './resources/usage'
 
 export interface ClientOptions {
   /** Defaults to process.env['SIMMIT_SECRET_KEY'], exactly one env fallback. Construction
@@ -46,6 +47,7 @@ export default class Simmit {
   readonly jobs: Jobs
   readonly credits: Credits
   readonly artifacts: Artifacts
+  readonly usage: Usage
 
   readonly baseURL: string
 
@@ -77,6 +79,7 @@ export default class Simmit {
     this.jobs = new Jobs(this)
     this.credits = new Credits(this)
     this.artifacts = new Artifacts(this)
+    this.usage = new Usage(this)
   }
 
   /** @internal Resource classes route through here; not public surface. */

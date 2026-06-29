@@ -92,6 +92,14 @@ const { url } = await client.artifacts.getUrl(artifactId)
 const balance = await client.credits.get()
 ```
 
+### Account usage and limits
+
+```ts
+const usage = await client.usage.get()
+usage.limits.maxActiveJobs // the key's concurrency ceiling (number | null)
+usage.snapshot.activeJobs // jobs in flight right now (number | null)
+```
+
 ### Errors
 
 Every API error is a typed subclass of `SimmitError`, with a narrowed `code`

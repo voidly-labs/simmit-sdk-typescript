@@ -482,9 +482,9 @@ export interface operations {
                     };
                     /** @description Optional per-job credentials. These values are used only for this job and are never persisted. */
                     credentials?: {
-                        /** @description Battle.net API client ID. Must be provided together with `bnetClientSecret`. Used only for this job to allow SimC armory/guild imports; never persisted with your job data. */
+                        /** @description Battle.net API client ID. Must be provided together with `bnetClientSecret`. Lets SimC perform armory/guild imports and resolve item data in your profile that is missing from the current build. Used only for this job and never persisted. */
                         bnetClientId?: string;
-                        /** @description Battle.net API client secret. Must be provided together with `bnetClientId`. Used only for this job to allow SimC armory/guild imports; never persisted with your job data. */
+                        /** @description Battle.net API client secret. Must be provided together with `bnetClientId`. Lets SimC perform armory/guild imports and resolve item data in your profile that is missing from the current build. Used only for this job and never persisted. */
                         bnetClientSecret?: string;
                     };
                     /** @description Optional webhook subscription settings for this job. Delivery URL and signing secret come from your webhook configuration. */
@@ -1971,7 +1971,7 @@ export interface operations {
                              * @description The reason this grant was issued.
                              * @enum {string}
                              */
-                            reason: "grant_sandbox_allowance" | "grant_developer_allowance" | "grant_beta" | "grant_promo" | "grant_onboarding" | "grant_sandbox_restricted_onboarding" | "grant_personal_allowance";
+                            reason: "grant_sandbox_allowance" | "grant_developer_allowance" | "grant_beta" | "grant_promo" | "grant_onboarding" | "grant_sandbox_restricted_onboarding" | "grant_personal_allowance" | "grant_personal_plus_allowance";
                             /** @description Credits currently available in this grant. Excludes any credits already committed to in-flight jobs. */
                             remaining: number;
                             /** @description Credits originally issued in this grant. */

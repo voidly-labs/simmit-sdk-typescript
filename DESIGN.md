@@ -1,4 +1,4 @@
-# Simmit TypeScript SDK: v1 Design (revision 2.4)
+# Simmit TypeScript SDK: v1 Design (revision 2.5)
 
 Scope: public surface and foundations only, a design proposal, not an implementation.
 Convention reference: `anthropic-sdk-typescript`; where this doc is silent, that SDK's idiom is
@@ -65,6 +65,8 @@ Publishing: tsup → `dist/`, `exports` map (ESM+CJS+`.d.ts`), `engines.node: ">
 export default class Simmit {
   readonly jobs: Jobs
   readonly credits: Credits
+  readonly artifacts: Artifacts
+  readonly usage: Usage
   constructor(options?: ClientOptions)
 }
 
@@ -120,7 +122,7 @@ compose: first to fire aborts (timeout → `APIConnectionTimeoutError`, retryabl
 
 `api.md`-style listing. Types: `Job` · `JobCreateParams` · `JobCreateResponse` · `JobStatus` ·
 `TerminalJobStatus` · `JobErrorCode` · `CompletedJob` · `JobResult` · `JobStatusResponse` · `JobCancelResponse` ·
-`CreditBalance` · `CreditGrant` · `ArtifactUrl` · `Artifact` · `ArtifactKind` · `ArtifactMimeType` · `WebhookEvent`
+`CreditBalance` · `CreditGrant` · `UsageResponse` · `UsagePeriod` · `UsageSnapshot` · `UsageLimits` · `ArtifactUrl` · `Artifact` · `ArtifactKind` · `ArtifactMimeType` · `WebhookEvent`
 
 - <code title="post /v1/simc/jobs">client.jobs.create({ ...params }, options?) -> JobCreateResponse</code>
 - <code title="get /v1/simc/jobs/{id}">client.jobs.get(jobId, options?) -> Job</code>
@@ -130,6 +132,7 @@ compose: first to fire aborts (timeout → `APIConnectionTimeoutError`, retryabl
 - <code title="post /v1/simc/jobs/{id}/cancel">client.jobs.cancel(jobId, options?) -> JobCancelResponse</code>
 - <code title="get /v1/simc/credits">client.credits.get(options?) -> CreditBalance</code>
 - <code title="get /v1/simc/artifacts/{id}/url">client.artifacts.getUrl(artifactId, options?) -> ArtifactUrl</code>
+- <code title="get /v1/simc/usage">client.usage.get(options?) -> UsageResponse</code>
 
 Standalone status helpers (pure, no client; for the decoupled and webhook flows where consumers branch on a job's state):
 
@@ -446,8 +449,9 @@ now; §1 assumes the scope is ours.
   `{ jobs, page: { limit, hasMore, nextCursor, since } }`). Exclusion is a scope choice, not an
   API gap; the pagination idiom (Anthropic `Page` classes) lands with it.
 - **`jobs.wait(jobId)`:** small, additive, v1.x. (`jobs.getStatus` ships in v1, see §4.)
-- **Builds & usage endpoints:** read-mostly metadata, additive later. Named gap: the docs'
+- **Builds endpoints:** read-mostly metadata, additive later. Named gap: the docs'
   bundled-profiles best practice depends on excluded `GET /v1/simc/builds`. Hand-rolled until v1.x.
+  (`GET /v1/simc/usage` was promoted into v1 as `usage.get()` for the concurrency/limits surface, §4.)
 - **Plain-text submission** (`text/plain`): the SDK is JSON-only. The generated-types seam
   cannot see the docs-only contract (§8.10). Migration map: raw body → `profile.text`; query
   params (`channel`, `multiStage`, …) → envelope fields; `X-Bnet-*` headers → `credentials`.
@@ -505,6 +509,14 @@ Prerequisites (upstream): `kind` is now enumerated in the spec (§8.14, shipped 
 excluded (as in §9): downloading/parsing the report bytes and the versioned v2/v3 report schema.
 
 ## CHANGELOG
+
+rev 2.4 → rev 2.5 (usage resource + spec 1.3.1):
+
+- Promote `GET /v1/simc/usage` into v1 as `client.usage.get()` (was a §9 exclusion), surfacing the
+  account's `limits` (incl. `maxActiveJobs`), in-flight `snapshot` (`activeJobs`/`queuedJobs`/
+  `runningJobs`), and current-period stats (`period`). Adds `UsageResponse`/`UsagePeriod`/`UsageSnapshot`/`UsageLimits`.
+- Re-vendored the spec to 1.3.1: `CreditGrant.reason` gains `grant_personal_plus_allowance`;
+  refreshed Battle.net credential descriptions.
 
 rev 2.3 → rev 2.4 (API 1.2.0 adoption):
 
