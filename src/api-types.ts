@@ -39,9 +39,11 @@ export type CreditGrant = CreditBalance['grants'][number]
 /** Account usage, in-flight snapshot, and per-key limits (GET /v1/simc/usage). */
 export type UsageResponse = Ok<paths['/v1/simc/usage']['get']>
 
-export type UsageLimits = UsageResponse['limits']
+export type UsagePeriod = UsageResponse['period']
 
 export type UsageSnapshot = UsageResponse['snapshot']
+
+export type UsageLimits = UsageResponse['limits']
 
 /** A single artifact on a job result (`result.result.artifacts[]`). */
 export type Artifact = NonNullable<JobResult['result']>['artifacts'][number]

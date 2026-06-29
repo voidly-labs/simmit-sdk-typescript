@@ -173,7 +173,12 @@ describe('usage.get (end to end)', () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
-          usage: {},
+          period: {
+            avgRuntimeSeconds: 12,
+            readsUsed: 3,
+            readsLimit: null,
+            readsCapResetAt: null
+          },
           snapshot: { activeJobs: 2, queuedJobs: 1, runningJobs: 1 },
           limits: { maxActiveJobs: 5 }
         }),
@@ -186,6 +191,7 @@ describe('usage.get (end to end)', () => {
 
     expect(usage.limits.maxActiveJobs).toBe(5)
     expect(usage.snapshot.activeJobs).toBe(2)
+    expect(usage.period.avgRuntimeSeconds).toBe(12)
     const [url, init] = fetchMock.mock.calls[0]!
     expect(url).toBe('https://api.simmit.com/v1/simc/usage')
     expect(init.method).toBe('GET')

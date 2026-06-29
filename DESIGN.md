@@ -122,7 +122,7 @@ compose: first to fire aborts (timeout → `APIConnectionTimeoutError`, retryabl
 
 `api.md`-style listing. Types: `Job` · `JobCreateParams` · `JobCreateResponse` · `JobStatus` ·
 `TerminalJobStatus` · `JobErrorCode` · `CompletedJob` · `JobResult` · `JobStatusResponse` · `JobCancelResponse` ·
-`CreditBalance` · `CreditGrant` · `UsageResponse` · `UsageLimits` · `UsageSnapshot` · `ArtifactUrl` · `Artifact` · `ArtifactKind` · `ArtifactMimeType` · `WebhookEvent`
+`CreditBalance` · `CreditGrant` · `UsageResponse` · `UsagePeriod` · `UsageSnapshot` · `UsageLimits` · `ArtifactUrl` · `Artifact` · `ArtifactKind` · `ArtifactMimeType` · `WebhookEvent`
 
 - <code title="post /v1/simc/jobs">client.jobs.create({ ...params }, options?) -> JobCreateResponse</code>
 - <code title="get /v1/simc/jobs/{id}">client.jobs.get(jobId, options?) -> Job</code>
@@ -514,7 +514,7 @@ rev 2.4 → rev 2.5 (usage resource + spec 1.3.1):
 
 - Promote `GET /v1/simc/usage` into v1 as `client.usage.get()` (was a §9 exclusion), surfacing the
   account's `limits` (incl. `maxActiveJobs`), in-flight `snapshot` (`activeJobs`/`queuedJobs`/
-  `runningJobs`), and current-period `usage`. Adds `UsageResponse`/`UsageLimits`/`UsageSnapshot`.
+  `runningJobs`), and current-period stats (`period`). Adds `UsageResponse`/`UsagePeriod`/`UsageSnapshot`/`UsageLimits`.
 - Re-vendored the spec to 1.3.1: `CreditGrant.reason` gains `grant_personal_plus_allowance`;
   refreshed Battle.net credential descriptions.
 
