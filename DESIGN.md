@@ -1,4 +1,4 @@
-# Simmit TypeScript SDK: v1 Design (revision 2.5)
+# Simmit TypeScript SDK: v1 Design (revision 2.6)
 
 Scope: public surface and foundations only, a design proposal, not an implementation.
 Convention reference: `anthropic-sdk-typescript`; where this doc is silent, that SDK's idiom is
@@ -477,9 +477,9 @@ are closed enums (the spec enumerated both in 1.2.0, §8.14):
 export type Artifact = NonNullable<JobResult['result']>['artifacts'][number]
 //   { id: string; url: string; kind: ArtifactKind; mimeType: ArtifactMimeType; stage: number | null }
 export type ArtifactKind = Artifact['kind']
-//   'html_report' | 'json_report' | 'input' | 'stdout_log' | 'stderr_log'
+//   'html_report' | 'json_report' | 'csv_report' | 'input' | 'stdout_log' | 'stderr_log'
 export type ArtifactMimeType = Artifact['mimeType']
-//   'application/json' | 'text/html' | 'text/plain'
+//   'application/json' | 'text/html' | 'text/csv' | 'text/plain'
 ```
 
 Selectors. Pure free functions (no request; the result stays the plain generated record). They
@@ -509,6 +509,13 @@ Prerequisites (upstream): `kind` is now enumerated in the spec (§8.14, shipped 
 excluded (as in §9): downloading/parsing the report bytes and the versioned v2/v3 report schema.
 
 ## CHANGELOG
+
+rev 2.5 → rev 2.6 (spec 1.5.0):
+
+- Re-vendored to 1.5.0 (additive). CSV artifacts: `JobCreateParams.artifacts.csv` opts into a
+  per-profileset DPS table, and `ArtifactKind`/`ArtifactMimeType` gain `csv_report`/`text/csv`.
+  The result `summary.metric` widens to `'dps' | 'raid_dps'` (whole-group damage when the input
+  sets `profileset_metric=raid_dps`). All flow through the generated types; no hand-written change.
 
 rev 2.4 → rev 2.5 (usage resource + spec 1.3.1):
 
