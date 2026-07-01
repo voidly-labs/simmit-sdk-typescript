@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.5.0...v0.6.0) (2026-07-01)
+
+
+### Features
+
+* adopt spec 1.5.0 (CSV artifacts, raid_dps metric) ([#49](https://github.com/voidly-labs/simmit-sdk-typescript/issues/49)) ([c1f4fa9](https://github.com/voidly-labs/simmit-sdk-typescript/commit/c1f4fa9a1349edc18e611bc93e1c129ab4584220))
+
 ## [0.5.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.4.0...v0.5.0) (2026-06-29)
 
 
