@@ -498,9 +498,10 @@ export interface operations {
                         events: "job.terminal"[];
                     };
                     /**
-                     * @description Controls which output formats are produced. Omit for the default (JSON v2 only, no HTML). Logs and input artifacts are always produced regardless. For multistage runs, HTML is generated only for the final stage.
+                     * @description Controls which output formats are produced. Omit for the default (JSON v2 only, no HTML or CSV). Logs and input artifacts are always produced regardless. For multistage runs, HTML is generated only for the final stage; the CSV table covers every profileset across all stages.
                      * @example {
                      *       "html": true,
+                     *       "csv": true,
                      *       "json": {
                      *         "version": "2"
                      *       }
@@ -509,6 +510,8 @@ export interface operations {
                     artifacts?: {
                         /** @description Whether to generate an HTML report. Defaults to `false`. */
                         html?: boolean;
+                        /** @description Whether to generate a CSV result table (`result.csv`): the baseline plus one row per profileset, columns `name,dps_mean,dps_min,dps_max,dps_std_dev,dps_mean_std_dev`. Defaults to `false`. */
+                        csv?: boolean;
                         /** @description JSON report options. A JSON report is always generated; use this to select the schema version. */
                         json?: {
                             /**
@@ -1328,10 +1331,10 @@ export interface operations {
                         result: {
                             summary: {
                                 /**
-                                 * @description Primary metric used for ranking.
+                                 * @description The metric that `mean` and `mean_error` are reported in and that profilesets are ranked by. `dps` is the main actor's own damage (the default). `raid_dps` is the whole group's combined damage, returned when your input sets `profileset_metric=raid_dps`; in that case `mainActor.mean` is the group total.
                                  * @enum {string}
                                  */
-                                metric: "dps";
+                                metric: "dps" | "raid_dps";
                                 /** @description Result for the headline actor (selected by SimC's `profileset_main_actor_index` directive, default `0`). When profileset results are available, this object also carries a `profilesets` block (`{ count, results }`) for the sweep over this actor; the block is omitted when no results are available (the input declared no profilesets, or none were produced). For multi-player sims using `copy=` or `set=`, per-player results for the remaining actors are in the JSON artifact — that multi-player case is separate from the profileset sweep. */
                                 mainActor: {
                                     /** @description Actor name as defined in your profile. */
@@ -1391,15 +1394,15 @@ export interface operations {
                                  */
                                 url: string;
                                 /**
-                                 * @description Machine-readable artifact category. `html_report`: human-readable HTML report. `json_report`: machine-readable JSON results. `input`: the exact SimC input your job ran. `stdout_log` / `stderr_log`: raw SimC logs. Under multistage execution an artifact is identified by `kind` together with `stage` (the same `kind` appears once per stage); `stage` is null for single-run jobs.
+                                 * @description Machine-readable artifact category. `html_report`: human-readable HTML report. `json_report`: machine-readable JSON results. `csv_report`: per-profileset DPS table (`result.csv`, columns `name,dps_mean,dps_min,dps_max,dps_std_dev,dps_mean_std_dev`); a single job-level artifact (`stage` null) covering every profileset across all stages. `input`: the exact SimC input your job ran. `stdout_log` / `stderr_log`: raw SimC logs. Under multistage execution html/json artifacts are identified by `kind` together with `stage` (the same `kind` appears once per stage); `stage` is null for single-run jobs and for `csv_report`.
                                  * @enum {string}
                                  */
-                                kind: "html_report" | "json_report" | "input" | "stdout_log" | "stderr_log";
+                                kind: "html_report" | "json_report" | "csv_report" | "input" | "stdout_log" | "stderr_log";
                                 /**
-                                 * @description MIME type of the artifact content, drawn from a fixed set: `application/json`, `text/html`, or `text/plain`.
+                                 * @description MIME type of the artifact content, drawn from a fixed set: `application/json`, `text/html`, `text/csv`, or `text/plain`.
                                  * @enum {string}
                                  */
-                                mimeType: "application/json" | "text/html" | "text/plain";
+                                mimeType: "application/json" | "text/html" | "text/csv" | "text/plain";
                                 /** @description Stage number for multistage execution artifacts (1-indexed). Null for single-run jobs or artifacts not associated with a specific multistage stage. */
                                 stage: number | null;
                             }[];
@@ -1549,7 +1552,7 @@ export interface operations {
                             estimatedStartSeconds: number | null;
                             /**
                              * Format: date-time
-                             * @description When this estimate was last computed.
+                             * @description When the underlying wait-time estimate was last refreshed. Null when no estimate is available.
                              */
                             estimatedStartUpdatedAt: string | null;
                         } | null;
