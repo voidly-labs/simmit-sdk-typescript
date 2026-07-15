@@ -25,6 +25,7 @@ import {
   ResultUnavailableError,
   ServiceUnavailableError,
   SimmitError,
+  TooManyVariantsError,
   UnprocessableEntityError,
   WebhookVerificationError
 } from '../src/error'
@@ -90,6 +91,7 @@ describe('code subclass selection', () => {
       ResultUnavailableError,
       UnprocessableEntityError
     ],
+    [422, 'too_many_variants', TooManyVariantsError, UnprocessableEntityError],
     [429, 'max_active_jobs_exceeded', MaxActiveJobsError, RateLimitError],
     [429, 'rate_limit_exceeded', RateLimitError, APIError]
   ] as const)('%i %s', (status, code, cls, parent) => {
@@ -134,6 +136,21 @@ describe('typed meta', () => {
       })
     ) as InsufficientCreditsLiabilityError
     expect(err.meta?.priorityFeeCredits).toBe(50)
+  })
+
+  it('surfaces variant counts on TooManyVariantsError', () => {
+    const err = generate(
+      422,
+      envelope('too_many_variants', {
+        reason: 'too_many_variants',
+        totalVariants: 5000,
+        maxVariants: 1000,
+        upgradeUrl: 'https://simmit.com/account'
+      })
+    ) as TooManyVariantsError
+    expect(err.meta.totalVariants).toBe(5000)
+    expect(err.meta.maxVariants).toBe(1000)
+    expect(err.meta.upgradeUrl).toBe('https://simmit.com/account')
   })
 
   it('preserves null meta and exposes the raw body via .error', () => {

@@ -153,6 +153,9 @@ export class APIError<
       if (code === 'input_sanitized_rejected') {
         return new InvalidProfileError(422, body, message, headers)
       }
+      if (code === 'too_many_variants') {
+        return new TooManyVariantsError(422, body, message, headers)
+      }
       if (code === 'result_unavailable') {
         return new ResultUnavailableError(422, body, message, headers)
       }
@@ -258,6 +261,20 @@ export class InvalidProfileError extends UnprocessableEntityError {
     blocked: Array<{ line: number; text: string }>
     blockedCount: number
     blockedTruncated: boolean
+  }
+}
+
+export class TooManyVariantsError extends UnprocessableEntityError {
+  declare readonly code: 'too_many_variants'
+  declare readonly meta: {
+    reason: 'too_many_variants'
+    message: string
+    /** Simulated variants the input expands to, counting profileset/copy/set directives. */
+    totalVariants: number
+    /** Maximum simulated variants per sim the account allows. */
+    maxVariants: number
+    /** Account page where higher variant limits are available. */
+    upgradeUrl: string
   }
 }
 

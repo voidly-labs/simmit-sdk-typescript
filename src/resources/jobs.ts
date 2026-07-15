@@ -5,6 +5,7 @@ import type {
   JobCancelResponse,
   JobCreateParams,
   JobCreateResponse,
+  JobProfileResponse,
   JobResult,
   JobStatus,
   JobStatusResponse
@@ -101,6 +102,24 @@ export class Jobs {
       {
         method: 'GET',
         path: `/v1/simc/jobs/${encodeURIComponent(jobId)}/result`
+      },
+      options
+    )
+  }
+
+  /**
+   * Fetch the SimC profile text submitted with a job, available at any point in
+   * its lifecycle (including while it is queued or running). `text` is `null`
+   * when no profile text is stored for the job.
+   */
+  getProfile(
+    jobId: string,
+    options?: RequestOptions
+  ): APIPromise<JobProfileResponse> {
+    return this.#client._request<JobProfileResponse>(
+      {
+        method: 'GET',
+        path: `/v1/simc/jobs/${encodeURIComponent(jobId)}/profile`
       },
       options
     )
