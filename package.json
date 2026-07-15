@@ -38,14 +38,14 @@
     "lint:package": "publint && attw --pack ."
   },
   "devDependencies": {
-    "@arethetypeswrong/cli": "^0.18.3",
+    "@arethetypeswrong/cli": "^0.18.5",
     "@types/node": "^20.19.43",
     "openapi-typescript": "^7.4.0",
-    "prettier": "^3.8.4",
+    "prettier": "^3.9.5",
     "publint": "^0.3.21",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.10"
   },
   "keywords": [
     "simmit",
