@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.6.0...v0.7.0) (2026-07-15)
+
+
+### Features
+
+* add jobs.getProfile and map too_many_variants (spec 1.9.0) ([#53](https://github.com/voidly-labs/simmit-sdk-typescript/issues/53)) ([6e0c107](https://github.com/voidly-labs/simmit-sdk-typescript/commit/6e0c1077d3a4724dcd33444e2d3b8ed66caab079))
+
 ## [0.6.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.5.0...v0.6.0) (2026-07-01)
 
 
