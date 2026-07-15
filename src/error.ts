@@ -182,10 +182,7 @@ export class APIError<
 export class BadRequestError extends APIError<400, string> {}
 
 export type AuthenticationErrorCode =
-  | 'missing_token'
-  | 'invalid_token'
-  | 'revoked_token'
-  | 'expired_token'
+  'missing_token' | 'invalid_token' | 'revoked_token' | 'expired_token'
 
 export class AuthenticationError extends APIError<
   401,
@@ -286,8 +283,7 @@ export class ResultUnavailableError extends UnprocessableEntityError {
 }
 
 export type RateLimitErrorCode =
-  | 'rate_limit_exceeded'
-  | 'max_active_jobs_exceeded'
+  'rate_limit_exceeded' | 'max_active_jobs_exceeded'
 
 export class RateLimitError extends APIError<429, RateLimitErrorCode> {
   declare readonly meta:
