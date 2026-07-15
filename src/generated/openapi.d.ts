@@ -107,6 +107,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/simc/jobs/{id}/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a SimC job’s submitted profile
+         * @description Returns the SimC profile text you submitted with the job. Available at any point in the job’s lifecycle, including while the job is queued or running.
+         */
+        get: operations["getJobProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/simc/jobs/{id}/status": {
         parameters: {
             query?: never;
@@ -696,7 +716,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Your SimC profile contains directives Simmit does not allow. `meta.message` explains the rejection and `meta.docsUrl` links to the SimC directives reference. */
+            /** @description Your input was rejected. `code` is `input_sanitized_rejected` when your profile contains directives Simmit does not allow (`meta.docsUrl` links to the directives reference), or `too_many_variants` when it expands to more simulated variants than your account allows (`meta.upgradeUrl` links to your account page, where higher limits are available). `meta.message` explains the rejection. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -705,10 +725,10 @@ export interface operations {
                     "application/json": {
                         error: string;
                         /** @enum {string} */
-                        code: "input_sanitized_rejected";
+                        code: "input_sanitized_rejected" | "too_many_variants";
                         meta: {
                             /** @enum {string} */
-                            reason: "input_sanitized_rejected";
+                            reason: "input_sanitized_rejected" | "too_many_variants";
                             /** @description Human-readable explanation of why the input was rejected. */
                             message: string;
                             /**
@@ -725,6 +745,15 @@ export interface operations {
                             blockedCount: number;
                             /** @description `true` when more lines were rejected than included in `blocked`. */
                             blockedTruncated: boolean;
+                            /** @description Simulated variants your input expands to, counting `profileset`, `copy`, and `set` directives. */
+                            totalVariants?: number;
+                            /** @description Maximum simulated variants per sim for your account. */
+                            maxVariants?: number;
+                            /**
+                             * Format: uri
+                             * @description Link to your account page, where higher variant limits are available.
+                             */
+                            upgradeUrl?: string;
                         };
                         /**
                          * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
@@ -884,6 +913,24 @@ export interface operations {
                             repo: string;
                             /** @description Git commit hash of the SimC source used for this build. */
                             commit: string;
+                            /** @description SimC program version for this build (e.g. `1205-01`). Null when not recorded. */
+                            simcVersion: string | null;
+                            /** @description The live and PTR WoW game versions this build simulates against. Null when not recorded. */
+                            gameData: {
+                                live: {
+                                    /** @description Live WoW game version (e.g. `12.0.7.68453`). */
+                                    version: string;
+                                    /** @description Hotfix date of the live game data (`YYYY-MM-DD`). */
+                                    hotfixDate: string;
+                                };
+                                /** @description PTR game version and hotfix date, or null if this build has no PTR data. */
+                                ptr: {
+                                    /** @description PTR WoW game version (e.g. `12.1.0.68569`). */
+                                    version: string;
+                                    /** @description Hotfix date of the PTR game data (`YYYY-MM-DD`). */
+                                    hotfixDate: string;
+                                } | null;
+                            } | null;
                             /**
                              * Format: uuid
                              * @description Unique identifier for this build.
@@ -975,6 +1022,24 @@ export interface operations {
                         repo: string;
                         /** @description Git commit hash of the SimC source used for this build. */
                         commit: string;
+                        /** @description SimC program version for this build (e.g. `1205-01`). Null when not recorded. */
+                        simcVersion: string | null;
+                        /** @description The live and PTR WoW game versions this build simulates against. Null when not recorded. */
+                        gameData: {
+                            live: {
+                                /** @description Live WoW game version (e.g. `12.0.7.68453`). */
+                                version: string;
+                                /** @description Hotfix date of the live game data (`YYYY-MM-DD`). */
+                                hotfixDate: string;
+                            };
+                            /** @description PTR game version and hotfix date, or null if this build has no PTR data. */
+                            ptr: {
+                                /** @description PTR WoW game version (e.g. `12.1.0.68569`). */
+                                version: string;
+                                /** @description Hotfix date of the PTR game data (`YYYY-MM-DD`). */
+                                hotfixDate: string;
+                            } | null;
+                        } | null;
                         /**
                          * Format: uuid
                          * @description Unique identifier for this build.
@@ -1501,6 +1566,82 @@ export interface operations {
             };
         };
     };
+    getJobProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The SimC profile text you submitted with the job. */
+            200: {
+                headers: {
+                    /** @description Your in-flight job count at the time of this response. */
+                    "X-Active-Jobs": string;
+                    /** @description Your account ceiling for in-flight jobs. */
+                    "X-Max-Active-Jobs": string;
+                    /** @description Correlation id for this request, present on every response. The same value is echoed in the `requestId` field of error bodies. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description The exact SimC profile text you submitted with this job. `null` if no profile text is stored for the job. */
+                        text: string | null;
+                    };
+                };
+            };
+            /** @description Your API token is missing, invalid, or not authorized for this request. See `code` for the specific reason. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @enum {string} */
+                        code: "missing_token" | "invalid_token" | "revoked_token" | "expired_token";
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description Job not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        code: string;
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+        };
+    };
     getJobStatus: {
         parameters: {
             query?: {
@@ -1974,7 +2115,7 @@ export interface operations {
                              * @description The reason this grant was issued.
                              * @enum {string}
                              */
-                            reason: "grant_sandbox_allowance" | "grant_developer_allowance" | "grant_beta" | "grant_promo" | "grant_onboarding" | "grant_sandbox_restricted_onboarding" | "grant_personal_allowance" | "grant_personal_plus_allowance";
+                            reason: "grant_sandbox_allowance" | "grant_developer_allowance" | "grant_beta" | "grant_promo" | "grant_onboarding" | "grant_sandbox_restricted_onboarding" | "grant_personal_allowance" | "grant_personal_plus_allowance" | "onboarding" | "allowance" | "promo";
                             /** @description Credits currently available in this grant. Excludes any credits already committed to in-flight jobs. */
                             remaining: number;
                             /** @description Credits originally issued in this grant. */

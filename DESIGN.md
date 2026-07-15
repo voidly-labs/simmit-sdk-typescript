@@ -1,4 +1,4 @@
-# Simmit TypeScript SDK: v1 Design (revision 2.6)
+# Simmit TypeScript SDK: v1 Design (revision 2.7)
 
 Scope: public surface and foundations only, a design proposal, not an implementation.
 Convention reference: `anthropic-sdk-typescript`; where this doc is silent, that SDK's idiom is
@@ -50,6 +50,7 @@ export type JobErrorCode = NonNullable<Job['errorCode']>
 export type CompletedJob = Job & { status: 'completed' }
 export type JobResult = Ok<'/v1/simc/jobs/{id}/result', 'get'>
 export type JobStatusResponse = Ok<'/v1/simc/jobs/{id}/status', 'get'>
+export type JobProfileResponse = Ok<'/v1/simc/jobs/{id}/profile', 'get'>
 export type JobCancelResponse = Ok<'/v1/simc/jobs/{id}/cancel', 'post'>
 export type CreditBalance = Ok<'/v1/simc/credits', 'get'>
 export type CreditGrant = CreditBalance['grants'][number]
@@ -121,13 +122,14 @@ compose: first to fire aborts (timeout → `APIConnectionTimeoutError`, retryabl
 ## 4. Resources and method signatures
 
 `api.md`-style listing. Types: `Job` · `JobCreateParams` · `JobCreateResponse` · `JobStatus` ·
-`TerminalJobStatus` · `JobErrorCode` · `CompletedJob` · `JobResult` · `JobStatusResponse` · `JobCancelResponse` ·
+`TerminalJobStatus` · `JobErrorCode` · `CompletedJob` · `JobResult` · `JobStatusResponse` · `JobProfileResponse` · `JobCancelResponse` ·
 `CreditBalance` · `CreditGrant` · `UsageResponse` · `UsagePeriod` · `UsageSnapshot` · `UsageLimits` · `ArtifactUrl` · `Artifact` · `ArtifactKind` · `ArtifactMimeType` · `WebhookEvent`
 
 - <code title="post /v1/simc/jobs">client.jobs.create({ ...params }, options?) -> JobCreateResponse</code>
 - <code title="get /v1/simc/jobs/{id}">client.jobs.get(jobId, options?) -> Job</code>
 - <code title="get /v1/simc/jobs/{id}/status">client.jobs.getStatus(jobId, options?) -> JobStatusResponse</code>
 - <code title="get /v1/simc/jobs/{id}/result">client.jobs.getResult(jobId, options?) -> JobResult</code>
+- <code title="get /v1/simc/jobs/{id}/profile">client.jobs.getProfile(jobId, options?) -> JobProfileResponse</code>
 - <code title="post /v1/simc/jobs + poll get /v1/simc/jobs/{id}/status">client.jobs.createAndWait({ ...params }, waitOptions?) -> CompletedJob</code>
 - <code title="post /v1/simc/jobs/{id}/cancel">client.jobs.cancel(jobId, options?) -> JobCancelResponse</code>
 - <code title="get /v1/simc/credits">client.credits.get(options?) -> CreditBalance</code>
@@ -153,6 +155,10 @@ export class Jobs {
     options?: RequestOptions
   ): APIPromise<JobStatusResponse>
   getResult(jobId: string, options?: RequestOptions): APIPromise<JobResult>
+  getProfile(
+    jobId: string,
+    options?: RequestOptions
+  ): APIPromise<JobProfileResponse>
   createAndWait(
     params: JobCreateParams,
     options?: JobWaitOptions
@@ -262,6 +268,7 @@ SimmitError extends Error
 │   ├── RequestTooLargeError               413 · code: string ('profile_too_large' is prose-only, §8)
 │   ├── UnprocessableEntityError           422 · code: string
 │   │   ├── InvalidProfileError            422 · code: 'input_sanitized_rejected'
+│   │   ├── TooManyVariantsError           422 · code: 'too_many_variants' (input over variant cap)
 │   │   └── ResultUnavailableError         422 · code: 'result_unavailable' (terminal, no result)
 │   ├── RateLimitError                     429 · code: 'rate_limit_exceeded' · meta: { scope: 'developer' }
 │   │   └── MaxActiveJobsError             429 · code: 'max_active_jobs_exceeded'
@@ -311,6 +318,10 @@ export class InvalidProfileError extends UnprocessableEntityError {
     blocked: Array<{ line: number; text: string }>; blockedCount: number; blockedTruncated: boolean
   }
 }
+export class TooManyVariantsError extends UnprocessableEntityError {
+  readonly code: 'too_many_variants'
+  readonly meta: { reason: 'too_many_variants'; message: string; totalVariants: number; maxVariants: number; upgradeUrl: string }
+}
 
 // The remaining single-code subclasses follow the same pattern; their exact metas:
 //   IdempotencyKeyReuseError  { reason: 'idempotency_key_reuse'; originalJobId: string; docsUrl?: string }
@@ -332,7 +343,9 @@ export class ServiceUnavailableError extends InternalServerError {
 ```
 
 Ground-truth overrides: `InvalidProfileError.meta` fields all **required** (rev 1 had three
-optional); both 402 metas **nullable** (spec: `object | null`); `priorityFeeCredits` docs-sourced (§8.11).
+optional); `TooManyVariantsError.meta` narrows the shared 422 meta (spec marks `totalVariants`/
+`maxVariants`/`upgradeUrl` optional so the object fits both codes) to required for this code; both
+402 metas **nullable** (spec: `object | null`); `priorityFeeCredits` docs-sourced (§8.11).
 
 Mapping rule in `APIError.generate`: status selects the base class; an enumerated `code` with
 structured `meta` selects the subclass; anything unrecognized falls back to the status class, so
@@ -509,6 +522,17 @@ Prerequisites (upstream): `kind` is now enumerated in the spec (§8.14, shipped 
 excluded (as in §9): downloading/parsing the report bytes and the versioned v2/v3 report schema.
 
 ## CHANGELOG
+
+rev 2.6 → rev 2.7 (spec 1.9.0):
+
+- Add `client.jobs.getProfile(jobId)` for the new `GET /v1/simc/jobs/{id}/profile`: returns the
+  SimC profile text submitted with the job (`{ text: string | null }`), readable at any lifecycle
+  stage. Adds `JobProfileResponse`.
+- Map the new job-submit 422 code `too_many_variants` to `TooManyVariantsError`, mirroring
+  `InvalidProfileError`. `meta` carries `totalVariants`/`maxVariants`/`upgradeUrl`.
+- Re-vendored to 1.9.0 (additive): job/build objects gain `simcVersion` and `gameData`
+  (`live`/`ptr` WoW versions and hotfix dates); `CreditGrant.reason` gains `onboarding`/
+  `allowance`/`promo`. All flow through the generated types.
 
 rev 2.5 → rev 2.6 (spec 1.5.0):
 

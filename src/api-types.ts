@@ -30,6 +30,8 @@ export type ArtifactUrl = Ok<paths['/v1/simc/artifacts/{id}/url']['get']>
 
 export type JobStatusResponse = Ok<paths['/v1/simc/jobs/{id}/status']['get']>
 
+export type JobProfileResponse = Ok<paths['/v1/simc/jobs/{id}/profile']['get']>
+
 export type JobCancelResponse = Ok<paths['/v1/simc/jobs/{id}/cancel']['post']>
 
 export type CreditBalance = Ok<paths['/v1/simc/credits']['get']>

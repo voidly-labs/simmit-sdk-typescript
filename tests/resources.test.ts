@@ -82,6 +82,19 @@ describe('resource → _request wiring', () => {
     expect(out).toBe(sentinel)
   })
 
+  it('jobs.getProfile → GET /v1/simc/jobs/{id}/profile', () => {
+    const client = makeClient()
+    const { spy, sentinel } = spyRequest(client)
+
+    const out = client.jobs.getProfile('519253542012420096')
+
+    expect(spy).toHaveBeenCalledWith(
+      { method: 'GET', path: '/v1/simc/jobs/519253542012420096/profile' },
+      undefined
+    )
+    expect(out).toBe(sentinel)
+  })
+
   it('jobs.cancel → POST /v1/simc/jobs/{id}/cancel with no idempotency flag', () => {
     const client = makeClient()
     const { spy, sentinel } = spyRequest(client)
