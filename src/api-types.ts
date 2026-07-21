@@ -45,6 +45,10 @@ export type UsagePeriod = UsageResponse['period']
 
 export type UsageSnapshot = UsageResponse['snapshot']
 
+/** The account's plan terms: metering rate, ceilings, concurrency, compute pool, and priority fees. */
+export type UsagePlan = UsageResponse['plan']
+
+/** @deprecated Alias of {@link UsagePlan} with identical contents; the API serves both. Prefer `usage.plan`. */
 export type UsageLimits = UsageResponse['limits']
 
 /** A single artifact on a job result (`result.result.artifacts[]`). */
