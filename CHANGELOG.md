@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.7.0...v0.8.0) (2026-07-21)
+
+
+### Features
+
+* adopt spec 1.14.0 credit model (maxCredits, usage.plan) ([#58](https://github.com/voidly-labs/simmit-sdk-typescript/issues/58)) ([6ec6768](https://github.com/voidly-labs/simmit-sdk-typescript/commit/6ec676821061e2cf4e956452eee16d8ec6634c61))
+
 ## [0.7.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.6.0...v0.7.0) (2026-07-15)
 
 
