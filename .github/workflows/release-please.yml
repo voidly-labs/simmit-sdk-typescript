@@ -36,6 +36,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      # Trusted Publishing (OIDC) needs npm >= 11.5.1; the npm bundled with Node 20 is 10.x.
-      - run: npm install -g npm@latest
+      # Trusted Publishing (OIDC) needs npm >= 11.5.1. Pin to 11.x: Node 20 ships npm 10, and
+      # npm 12 requires Node 22+.
+      - run: npm install -g npm@11
       - run: npm publish --provenance --access public
