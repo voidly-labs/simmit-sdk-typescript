@@ -1,4 +1,4 @@
-# Simmit TypeScript SDK: v1 Design (revision 2.7)
+# Simmit TypeScript SDK: v1 Design (revision 2.8)
 
 Scope: public surface and foundations only, a design proposal, not an implementation.
 Convention reference: `anthropic-sdk-typescript`; where this doc is silent, that SDK's idiom is
@@ -123,7 +123,7 @@ compose: first to fire aborts (timeout → `APIConnectionTimeoutError`, retryabl
 
 `api.md`-style listing. Types: `Job` · `JobCreateParams` · `JobCreateResponse` · `JobStatus` ·
 `TerminalJobStatus` · `JobErrorCode` · `CompletedJob` · `JobResult` · `JobStatusResponse` · `JobProfileResponse` · `JobCancelResponse` ·
-`CreditBalance` · `CreditGrant` · `UsageResponse` · `UsagePeriod` · `UsageSnapshot` · `UsageLimits` · `ArtifactUrl` · `Artifact` · `ArtifactKind` · `ArtifactMimeType` · `WebhookEvent`
+`CreditBalance` · `CreditGrant` · `UsageResponse` · `UsagePeriod` · `UsageSnapshot` · `UsagePlan` · `UsageLimits` · `ArtifactUrl` · `Artifact` · `ArtifactKind` · `ArtifactMimeType` · `WebhookEvent`
 
 - <code title="post /v1/simc/jobs">client.jobs.create({ ...params }, options?) -> JobCreateResponse</code>
 - <code title="get /v1/simc/jobs/{id}">client.jobs.get(jobId, options?) -> Job</code>
@@ -198,8 +198,8 @@ unknown keys reject: accurate generated types are load-bearing, not decorative):
 {
   build: { channel: 'nightly' | 'weekly' | 'latest'; gitBranch?: 'midnight' }
   profile: { text: string }                      // ≤ 2 MB UTF-8
-  runtime?: { multiStage?: boolean; maxRuntimeSeconds?: number; maxQueueSeconds?: number }
-  priority?: 'background' | 'standard' | 'high'  // enum/prose disagree, §8.6
+  runtime?: { multiStage?: boolean; maxCredits?: number; maxRuntimeSeconds?: number /* deprecated → maxCredits */; maxQueueSeconds?: number }
+  priority?: 'background' | 'standard' | 'high'  // enum + prose agree as of 1.14.0
   metadata?: Record<string, string>              // echoed back; excluded from idempotency digest (§6)
   credentials?: { bnetClientId: string; bnetClientSecret: string }
   webhook?: { events: ['job.terminal'] }
@@ -303,8 +303,8 @@ export type GenericMeta = Record<string, MetaValue>
 
 export class InsufficientCreditsError extends BillingError {
   readonly code: 'insufficient_credits'
-  /** maxAffordableRuntimeSeconds = largest maxRuntimeSeconds the current balance can cover. */
-  readonly meta: { reason: string; ceilingRuntimeSeconds?: number; maxAffordableRuntimeSeconds?: number; docsUrl?: string } | null
+  /** maxAffordableCredits = largest runtime.maxCredits the current balance can cover. */
+  readonly meta: { reason: string; ceilingMaxCredits?: number; maxAffordableCredits?: number; ceilingRuntimeSeconds?: number /* deprecated */; maxAffordableRuntimeSeconds?: number /* deprecated */; docsUrl?: string } | null
 }
 export class InsufficientCreditsLiabilityError extends BillingError {
   readonly code: 'insufficient_credits_liability'
@@ -383,10 +383,12 @@ the full record → return or throw.
 - **Polling cadence:** first poll after `pollIntervalMs` (default 1s), interval ×1.5 per poll,
   capped at 10s: sub-10s latency on short sims, ~6 req/min steady-state on long ones.
   (Queue-estimate-aware pacing via `queue.estimatedStartSeconds` is v1.x.)
-- **Wait deadline:** `maxRuntimeSeconds` defaults to 300s, but account ceilings vary and are not
-  publicly bounded, plus up to `maxQueueSeconds` (default 1800s) queued. A static default would
-  be wrong for someone. The create response returns the _applied_ ceilings, so the default is
-  per-job: `(runtime.ceiling.queueSeconds + runtime.ceiling.runtimeSeconds) × 1000 + 60_000`
+- **Wait deadline:** a job's runtime budget (`runtime.maxCredits`, default 9600 credits) and its
+  account ceilings vary and are not publicly bounded, plus up to `maxQueueSeconds` (default 1800s)
+  queued. A static default would be wrong for someone. The create response returns the _applied_
+  ceilings, so the default is per-job. `runtime.ceiling.runtimeSeconds` (the budget in seconds at
+  the 32 credits/second basis rate) is the only seconds-denominated value at create time, so the
+  deadline is `(runtime.ceiling.queueSeconds + runtime.ceiling.runtimeSeconds) × 1000 + 60_000`
   grace, falling back to 45 minutes if the ceilings are null. `waitTimeoutMs` overrides; no hard max.
 - **Returns:** `CompletedJob` (`Job & { status: 'completed' }`), typed so the success path needs
   no status checks; follow with `jobs.getResult(job.id)` for the sim output.
@@ -425,8 +427,8 @@ the full record → return or throw.
    only (zero wire change: do pre-SDK so generated types don't force `job.id!` on consumers).
    Dropping `success` is a wire change that hard-breaks simhammer (required bool in their
    deserializer). Deferred until coordinated.
-6. **`priority` enum/prose disagree, in the spec and in the docs:** schema allows `background`;
-   prose and the priority-fee docs discuss only `standard`/`high`. Reconcile everywhere.
+6. **`priority` enum/prose disagree (resolved in 1.14.0):** the schema enum and the field prose
+   now both list `background`, `standard`, `high`; `JobCreateParams.priority` types all three.
 7. **No request-id response header.** Anthropic exposes `requestID` on every error for support
    escalation; Simmit has nothing to surface. Add `x-request-id` (and echo it in error bodies).
 8. Cosmetic: `bearerFormat: "Bearer"` is a no-op. The field should describe the token format.
@@ -522,6 +524,19 @@ Prerequisites (upstream): `kind` is now enumerated in the spec (§8.14, shipped 
 excluded (as in §9): downloading/parsing the report bytes and the versioned v2/v3 report schema.
 
 ## CHANGELOG
+
+rev 2.7 → rev 2.8 (spec 1.14.0, credit model):
+
+- Adopt the credit-budget model. Jobs now take `runtime.maxCredits` (default 9600); `maxRuntimeSeconds`
+  is deprecated (interpreted as `maxCredits = seconds × 32`). Responses gain `runtime.creditsPerSecond`,
+  `runtime.priorityFeeCredits`, `runtime.ceiling.maxCredits`, and `meta.deprecations[]`; `errorCode`
+  gains `max_credits_reached`; `priority` gains `background`. All flow through the generated types.
+- `usage` gains the canonical `plan` object (`maxCreditsPerJob`, `defaultCreditsPerJob`,
+  `creditsPerSecond`, `pool: standard|warm|dedicated`, and the existing ceilings); `limits` is now a
+  deprecated alias. Adds `UsagePlan`, marks `UsageLimits` deprecated, README reads `usage.plan`.
+- `InsufficientCreditsMeta` gains `ceilingMaxCredits`/`maxAffordableCredits`; the runtime-seconds
+  fields are deprecated. `deriveWaitTimeoutMs` still reads `ceiling.runtimeSeconds` (populated, the
+  only seconds-denominated ceiling at create time), so `createAndWait` is unchanged.
 
 rev 2.6 → rev 2.7 (spec 1.9.0):
 

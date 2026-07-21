@@ -116,14 +116,18 @@ describe('code subclass selection', () => {
 })
 
 describe('typed meta', () => {
-  it('surfaces maxAffordableRuntimeSeconds on InsufficientCreditsError', () => {
+  it('surfaces credit affordability fields on InsufficientCreditsError', () => {
     const err = generate(
       402,
       envelope('insufficient_credits', {
         reason: 'insufficient_credits',
+        maxAffordableCredits: 3840,
+        ceilingMaxCredits: 9600,
         maxAffordableRuntimeSeconds: 120
       })
     ) as InsufficientCreditsError
+    expect(err.meta?.maxAffordableCredits).toBe(3840)
+    expect(err.meta?.ceilingMaxCredits).toBe(9600)
     expect(err.meta?.maxAffordableRuntimeSeconds).toBe(120)
   })
 

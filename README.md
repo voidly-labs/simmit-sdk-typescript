@@ -96,7 +96,7 @@ const balance = await client.credits.get()
 
 ```ts
 const usage = await client.usage.get()
-usage.limits.maxActiveJobs // the key's concurrency ceiling (number | null)
+usage.plan.maxActiveJobs // the key's concurrency ceiling (number | null)
 usage.snapshot.activeJobs // jobs in flight right now (number | null)
 ```
 

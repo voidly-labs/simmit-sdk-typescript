@@ -195,8 +195,13 @@ export class BillingError extends APIError<402, string> {}
 
 export type InsufficientCreditsMeta = {
   reason: string
+  /** The credit budget the rejected submission would have run under. */
+  ceilingMaxCredits?: number
+  /** Largest `runtime.maxCredits` the current balance can cover, after any priority fee. */
+  maxAffordableCredits?: number
+  /** @deprecated Use `ceilingMaxCredits`. The same ceiling in seconds at the 32 credits/second basis rate. */
   ceilingRuntimeSeconds?: number
-  /** Largest maxRuntimeSeconds the current balance can cover. */
+  /** @deprecated Use `maxAffordableCredits`. Largest maxRuntimeSeconds the current balance can cover. */
   maxAffordableRuntimeSeconds?: number
   docsUrl?: string
 }
