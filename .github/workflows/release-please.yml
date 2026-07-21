@@ -3,6 +3,7 @@ name: release-please
 on:
   push:
     branches: [main]
+  workflow_dispatch: {} # manual publish of the version currently on main
 
 permissions: {}
 
@@ -20,11 +21,11 @@ jobs:
 
   publish:
     needs: release-please
-    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    if: ${{ needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # npm provenance via OIDC
+      id-token: write # OIDC for npm Trusted Publishing + provenance
     steps:
       - uses: actions/checkout@v7.0.0
       - uses: pnpm/action-setup@v6.0.9
@@ -35,6 +36,6 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+      # Trusted Publishing (OIDC) needs npm >= 11.5.1; the npm bundled with Node 20 is 10.x.
+      - run: npm install -g npm@latest
       - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
