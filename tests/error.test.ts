@@ -6,6 +6,8 @@ import {
   AuthenticationError,
   BadRequestError,
   BillingError,
+  BuildPinNotAllowedError,
+  BuildPinUnavailableError,
   ConflictError,
   IdempotencyKeyReuseError,
   InsufficientCreditsError,
@@ -92,6 +94,18 @@ describe('code subclass selection', () => {
       UnprocessableEntityError
     ],
     [422, 'too_many_variants', TooManyVariantsError, UnprocessableEntityError],
+    [
+      422,
+      'build_pin_not_allowed',
+      BuildPinNotAllowedError,
+      UnprocessableEntityError
+    ],
+    [
+      422,
+      'build_pin_unavailable',
+      BuildPinUnavailableError,
+      UnprocessableEntityError
+    ],
     [429, 'max_active_jobs_exceeded', MaxActiveJobsError, RateLimitError],
     [429, 'rate_limit_exceeded', RateLimitError, APIError]
   ] as const)('%i %s', (status, code, cls, parent) => {
@@ -155,6 +169,34 @@ describe('typed meta', () => {
     expect(err.meta.totalVariants).toBe(5000)
     expect(err.meta.maxVariants).toBe(1000)
     expect(err.meta.upgradeUrl).toBe('https://simmit.com/account')
+  })
+
+  it('surfaces buildId and maxPinAgeDays on build-pin errors', () => {
+    const notAllowed = generate(
+      422,
+      envelope('build_pin_not_allowed', {
+        reason: 'build_pin_not_allowed',
+        message: 'Build pinning is not available on your plan.',
+        docsUrl: 'https://docs.simmit.com/build-pinning',
+        buildId: '11111111-1111-1111-1111-111111111111'
+      })
+    ) as BuildPinNotAllowedError
+    expect(notAllowed.meta.buildId).toBe('11111111-1111-1111-1111-111111111111')
+
+    const unavailable = generate(
+      422,
+      envelope('build_pin_unavailable', {
+        reason: 'build_pin_unavailable',
+        message: 'The pinned build is older than the limit.',
+        docsUrl: 'https://docs.simmit.com/build-pinning',
+        buildId: '22222222-2222-2222-2222-222222222222',
+        maxPinAgeDays: 30
+      })
+    ) as BuildPinUnavailableError
+    expect(unavailable.meta.buildId).toBe(
+      '22222222-2222-2222-2222-222222222222'
+    )
+    expect(unavailable.meta.maxPinAgeDays).toBe(30)
   })
 
   it('preserves null meta and exposes the raw body via .error', () => {
