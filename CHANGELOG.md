@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.8.0...v0.9.0) (2026-08-20)
+
+
+### Features
+
+* adopt spec 1.19.1 (richer result summary, build.id) ([#66](https://github.com/voidly-labs/simmit-sdk-typescript/issues/66)) ([0d102db](https://github.com/voidly-labs/simmit-sdk-typescript/commit/0d102db2c67a97d6deaab2895d14c6174ecc8dab))
+
 ## [0.8.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.7.0...v0.8.0) (2026-07-21)
 
 
