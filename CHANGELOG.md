@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.9.0...v0.10.0) (2026-08-20)
+
+
+### Features
+
+* **errors:** type the build-pin 422 codes ([#68](https://github.com/voidly-labs/simmit-sdk-typescript/issues/68)) ([d2922fa](https://github.com/voidly-labs/simmit-sdk-typescript/commit/d2922fa1c76591727e4bf76b26871f001f8bad42))
+
 ## [0.9.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.8.0...v0.9.0) (2026-08-20)
 
 
