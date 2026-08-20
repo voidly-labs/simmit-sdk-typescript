@@ -156,7 +156,7 @@ export interface paths {
         };
         /**
          * Get a SimC artifact URL
-         * @description Returns a stable public URL for a SimC job artifact (HTML report, JSON report, raw log, etc.), valid for the artifact's full retention window. Use this when you need to control the final fetch URL yourself — for example, browser flows that need explicit cross-origin handling.
+         * @description Returns a stable public URL for a SimC job artifact (HTML report, JSON report, raw log, etc.), valid for the artifact's full retention window. Use this when you need to control the final fetch URL yourself.
          */
         get: operations["getArtifactUrl"];
         put?: never;
@@ -216,7 +216,7 @@ export interface paths {
         };
         /**
          * Get your credit balance and active grants
-         * @description Returns your credit balance, split between purchased credits and any active grants. Total available credits equal `purchased + sum(grants[].remaining)`. `reserved` reports credits currently held against in-flight jobs and is already excluded from both `purchased` and `grants[].remaining`.
+         * @description Returns your credit balance, split between purchased credits and any active grants.
          *
          *     Consumption order: grants are spent before purchased credits, with the earliest-expiring grant spent first. Grants without an expiry are spent last.
          *
@@ -316,7 +316,7 @@ export interface components {
         JobLinks: {
             /**
              * Format: uri
-             * @description URL to a hosted page for this job. Shows a state-aware page (queued, running, failed) while the job is pre-terminal and the full HTML summary once it completes. The page does not auto-refresh today; reload to see the latest state. Returns `404` after retention expires.
+             * @description URL to a hosted page for this job. Shows live status while the job is queued or running, and the full report once it completes. Returns `404` after retention expires.
              */
             share: string;
             /**
@@ -443,7 +443,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                /** @description Optional client-supplied key (≤255 printable-ASCII chars) for safe retries. Reusing the same key with the same payload returns the original job; reusing it with a different payload returns 409. `metadata` is excluded from the payload comparison, so you can change it across retries. Keys are scoped to your API key and this endpoint, and do not expire. */
+                /** @description Optional client-supplied key (≤255 printable-ASCII chars) for safe retries. Reusing the same key with the same payload returns the original job; reusing it with a different payload returns 409. `metadata` is excluded from the payload comparison. Keys are scoped to your API key and this endpoint, and do not expire. */
                 "idempotency-key"?: string;
             };
             path?: never;
@@ -463,6 +463,11 @@ export interface operations {
                          * @enum {string}
                          */
                         gitBranch?: "midnight";
+                        /**
+                         * Format: uuid
+                         * @description Pin this job to a specific build: a build ID, as returned in `build.id` on any job response or by `GET /v1/simc/builds`. Available on plans that include build pinning. The build must be from the last 30 days and on the requested branch; if it is unavailable when the job runs, the job falls back to `channel`.
+                         */
+                        id?: string;
                     };
                     profile: {
                         /** @description SimC profile text to execute (the content you would normally paste into a local simc run). Maximum 2 MB (UTF-8 encoded). */
@@ -478,18 +483,18 @@ export interface operations {
                     runtime?: {
                         /** @description Opt-in to multistage execution with automatic culling between stages. When false or omitted, the sim runs in a single pass. */
                         multiStage?: boolean;
-                        /** @description Credit budget for this job. The full budget (plus any priority fee) is held from your balance at submission and the unused portion is refunded when the job settles; a job whose usage reaches the budget is stopped with `errorCode` `max_credits_reached` and billed the budget. Defaults to 9600 credits when omitted, which covers most jobs. To size from expected sim time, multiply seconds by `plan.creditsPerSecond` and add headroom. The budget applied is returned in the response as `runtime.ceiling.maxCredits`; the maximum is `plan.maxCreditsPerJob` on `GET /v1/simc/usage`. */
+                        /** @description Credit budget for this job. A job whose usage reaches the budget is stopped with `errorCode` `max_credits_reached` and billed the budget. Defaults to 9600 credits when omitted; the maximum is `plan.maxCreditsPerJob` on `GET /v1/simc/usage`. */
                         maxCredits?: number;
                         /**
                          * @deprecated
                          * @description Deprecated: use `maxCredits`. Interpreted as a credit budget of this many seconds at the basis rate of 32 credits per second (`maxCredits = maxRuntimeSeconds × 32`). Do not send both fields.
                          */
                         maxRuntimeSeconds?: number;
-                        /** @description Maximum time this job may wait in the queue before being auto-cancelled, in seconds. Defaults to 1800 seconds when omitted. The ceiling applied is returned in the response as `runtime.ceiling.queueSeconds`. */
+                        /** @description Maximum time this job may wait in the queue before being auto-cancelled, in seconds. Defaults to your plan's queue window when omitted; see `plan.defaultQueueSeconds` and the `plan.maxQueueSeconds` maximum on `GET /v1/simc/usage`. The ceiling applied is returned in the response as `runtime.ceiling.queueSeconds`. */
                         maxQueueSeconds?: number;
                     };
                     /**
-                     * @description Queue priority for this job. Allowed values: `background`, `standard`, `high`. Higher priority runs first; same-priority jobs run in submission order. `high` adds a flat per-job fee only when it would buy a faster start. The response reports the fee charged in `runtime.priorityFeeCredits`.
+                     * @description Queue priority for this job. Higher priority runs first; same-priority jobs run in submission order. `high` adds a flat per-job fee only when it would buy a faster start, reported in `runtime.priorityFeeCredits`.
                      * @default standard
                      * @enum {string}
                      */
@@ -505,11 +510,11 @@ export interface operations {
                     metadata?: {
                         [key: string]: string;
                     };
-                    /** @description Optional per-job credentials. These values are used only for this job and are never persisted. */
+                    /** @description Optional per-job credentials. Used only for this job and never persisted. */
                     credentials?: {
-                        /** @description Battle.net API client ID. Must be provided together with `bnetClientSecret`. Lets SimC perform armory/guild imports and resolve item data in your profile that is missing from the current build. Used only for this job and never persisted. */
+                        /** @description Battle.net API client ID. Must be provided together with `bnetClientSecret`. Lets SimC perform armory and guild imports, and resolve item data in your profile that is missing from the current build. */
                         bnetClientId?: string;
-                        /** @description Battle.net API client secret. Must be provided together with `bnetClientId`. Lets SimC perform armory/guild imports and resolve item data in your profile that is missing from the current build. Used only for this job and never persisted. */
+                        /** @description Battle.net API client secret. Must be provided together with `bnetClientId`. */
                         bnetClientSecret?: string;
                     };
                     /** @description Optional webhook subscription settings for this job. Delivery URL and signing secret come from your webhook configuration. */
@@ -523,7 +528,7 @@ export interface operations {
                         events: "job.terminal"[];
                     };
                     /**
-                     * @description Controls which output formats are produced. Omit for the default (JSON v2 only, no HTML or CSV). Logs and input artifacts are always produced regardless. For multistage runs, HTML is generated only for the final stage; the CSV table covers every profileset across all stages.
+                     * @description Controls which output formats are produced. Omit for the default (JSON v2 only). Logs and input artifacts are always produced. For multistage runs, HTML is generated only for the final stage.
                      * @example {
                      *       "html": true,
                      *       "csv": true,
@@ -535,7 +540,7 @@ export interface operations {
                     artifacts?: {
                         /** @description Whether to generate an HTML report. Defaults to `false`. */
                         html?: boolean;
-                        /** @description Whether to generate a CSV result table (`result.csv`): the baseline plus one row per profileset, columns `name,dps_mean,dps_min,dps_max,dps_std_dev,dps_mean_std_dev`. Defaults to `false`. */
+                        /** @description Whether to generate a CSV result table (`result.csv`): one row per actor, then one row per profileset. Defaults to `false`. */
                         csv?: boolean;
                         /** @description JSON report options. A JSON report is always generated; use this to select the schema version. */
                         json?: {
@@ -550,7 +555,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Sim accepted and queued. The returned job ID is your handle for polling, fetching the result, and downloading artifacts. */
+            /** @description Sim accepted and queued. */
             200: {
                 headers: {
                     /** @description Your in-flight job count at the time of this response. */
@@ -575,7 +580,7 @@ export interface operations {
                         id: string;
                         runtime: {
                             ceiling: {
-                                /** @description The credit budget that applied to this run: the amount held at submission (plus any priority fee), and the usage at which the job is stopped with `errorCode` `max_credits_reached`. For jobs that predate credit budgets, this is derived from the recorded runtime cap at the basis rate of 32 credits per second. View the maximum at `GET /v1/simc/usage` under `plan.maxCreditsPerJob`. */
+                                /** @description The credit budget that applied to this run: the usage at which the job is stopped with `errorCode` `max_credits_reached`. View the maximum at `GET /v1/simc/usage` under `plan.maxCreditsPerJob`. */
                                 maxCredits: number | null;
                                 /**
                                  * @deprecated
@@ -589,7 +594,7 @@ export interface operations {
                             priorityFeeCredits?: number;
                         };
                         links: components["schemas"]["JobLinks"];
-                        /** @description Warnings about your input. Omitted when there are none. Covers `iterations=` values above the platform safety cap and `target_error=` values below the platform safety floor. The job still runs at the clamped or floored value. */
+                        /** @description Warnings about your input. Omitted when there are none. The job still runs at the clamped or floored value. */
                         warnings?: {
                             /**
                              * @description Machine-readable warning category. `iterations_clamped` for `iterations=` values above the platform safety cap; `target_error_floored` for `target_error=` values below the platform safety floor.
@@ -605,7 +610,7 @@ export interface operations {
                             /** @description Human-readable explanation paired with `kind`. */
                             message: string;
                         }[];
-                        /** @description Notices about deprecated request fields your submission used. Omitted when there are none. The job is unaffected; each notice explains the replacement field. */
+                        /** @description Notices about deprecated request fields your submission used. Omitted when there are none. The job is unaffected. */
                         deprecations?: {
                             /** @description The deprecated request field, for example `runtime.maxRuntimeSeconds`. */
                             field: string;
@@ -752,7 +757,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Your input was rejected. `code` is `input_sanitized_rejected` when your profile contains directives Simmit does not allow (`meta.docsUrl` links to the directives reference), or `too_many_variants` when it expands to more simulated variants than your account allows (`meta.upgradeUrl` links to your account page, where a higher limit can be requested). `meta.message` explains the rejection. */
+            /** @description Your input was rejected. `code` is `input_sanitized_rejected` when your profile contains directives Simmit does not allow, `too_many_variants` when it expands past your account variant limit, `build_pin_not_allowed` when your plan does not include build pinning, or `build_pin_unavailable` when the pinned `build.id` cannot be used. `meta.message` explains the rejection. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -761,15 +766,15 @@ export interface operations {
                     "application/json": {
                         error: string;
                         /** @enum {string} */
-                        code: "input_sanitized_rejected" | "too_many_variants";
+                        code: "input_sanitized_rejected" | "too_many_variants" | "build_pin_not_allowed" | "build_pin_unavailable";
                         meta: {
                             /** @enum {string} */
-                            reason: "input_sanitized_rejected" | "too_many_variants";
+                            reason: "input_sanitized_rejected" | "too_many_variants" | "build_pin_not_allowed" | "build_pin_unavailable";
                             /** @description Human-readable explanation of why the input was rejected. */
                             message: string;
                             /**
                              * Format: uri
-                             * @description Link to the SimC directives reference.
+                             * @description Link to the documentation for this rejection.
                              */
                             docsUrl: string;
                             /** @description A sample of rejected lines. The full count may exceed the sample — see `blockedCount` and `blockedTruncated`. */
@@ -787,9 +792,16 @@ export interface operations {
                             maxVariants?: number;
                             /**
                              * Format: uri
-                             * @description Link to your account page, where a higher variant limit can be requested.
+                             * @description Link to your account page, where an upgrade can be requested.
                              */
                             upgradeUrl?: string;
+                            /**
+                             * Format: uuid
+                             * @description The rejected `build.id`.
+                             */
+                            buildId?: string;
+                            /** @description Maximum age of a pinnable build, in days. */
+                            maxPinAgeDays?: number;
                         };
                         /**
                          * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
@@ -1001,7 +1013,7 @@ export interface operations {
                             } | null;
                             /** @description Bundled profiles available for this build. See https://docs.simmit.com/api/bundled-profiles for more. */
                             profiles: {
-                                /** @description Profile filenames this build accepts in submitted profile text (e.g. `MID1_Mage_Arcane.simc`). Each file is verified at build time to parse and sim cleanly for one iteration. Reference one in your profile text on its own line or as `input=<filename>`. Sorted lexicographically. */
+                                /** @description Profile filenames this build accepts in submitted profile text (e.g. `MID1_Mage_Arcane.simc`). Reference one in your profile text on its own line or as `input=<filename>`. Sorted lexicographically. */
                                 manifest: string[];
                             } | null;
                         }[];
@@ -1110,7 +1122,7 @@ export interface operations {
                         } | null;
                         /** @description Bundled profiles available for this build. See https://docs.simmit.com/api/bundled-profiles for more. */
                         profiles: {
-                            /** @description Profile filenames this build accepts in submitted profile text (e.g. `MID1_Mage_Arcane.simc`). Each file is verified at build time to parse and sim cleanly for one iteration. Reference one in your profile text on its own line or as `input=<filename>`. Sorted lexicographically. */
+                            /** @description Profile filenames this build accepts in submitted profile text (e.g. `MID1_Mage_Arcane.simc`). Reference one in your profile text on its own line or as `input=<filename>`. Sorted lexicographically. */
                             manifest: string[];
                         } | null;
                     };
@@ -1254,10 +1266,10 @@ export interface operations {
                             priorityFeeCredits: number;
                             /** @description Metering rate applied to this run, in credits per second of SimC runtime: `creditsConsumed` is this rate times `simDurationMs` rounded up to whole seconds, plus `priorityFeeCredits`. Null until the job is assigned to a machine. */
                             creditsPerSecond: number | null;
-                            /** @description vCPU count of the machine this run executed on. Determines how fast a sim completes; billing uses `creditsPerSecond`. Null before execution. */
+                            /** @description vCPU count of the machine this run executed on. Null before execution. */
                             vcpus: number | null;
                             ceiling: {
-                                /** @description The credit budget that applied to this run: the amount held at submission (plus any priority fee), and the usage at which the job is stopped with `errorCode` `max_credits_reached`. For jobs that predate credit budgets, this is derived from the recorded runtime cap at the basis rate of 32 credits per second. View the maximum at `GET /v1/simc/usage` under `plan.maxCreditsPerJob`. */
+                                /** @description The credit budget that applied to this run: the usage at which the job is stopped with `errorCode` `max_credits_reached`. View the maximum at `GET /v1/simc/usage` under `plan.maxCreditsPerJob`. */
                                 maxCredits: number | null;
                                 /**
                                  * @deprecated
@@ -1353,7 +1365,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Full result payload for a finished job — summary metrics, runtime info, and artifact references. */
+            /** @description Full result payload for a finished job. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1405,10 +1417,10 @@ export interface operations {
                             priorityFeeCredits: number;
                             /** @description Metering rate applied to this run, in credits per second of SimC runtime: `creditsConsumed` is this rate times `simDurationMs` rounded up to whole seconds, plus `priorityFeeCredits`. Null until the job is assigned to a machine. */
                             creditsPerSecond: number | null;
-                            /** @description vCPU count of the machine this run executed on. Determines how fast a sim completes; billing uses `creditsPerSecond`. Null before execution. */
+                            /** @description vCPU count of the machine this run executed on. Null before execution. */
                             vcpus: number | null;
                             ceiling: {
-                                /** @description The credit budget that applied to this run: the amount held at submission (plus any priority fee), and the usage at which the job is stopped with `errorCode` `max_credits_reached`. For jobs that predate credit budgets, this is derived from the recorded runtime cap at the basis rate of 32 credits per second. View the maximum at `GET /v1/simc/usage` under `plan.maxCreditsPerJob`. */
+                                /** @description The credit budget that applied to this run: the usage at which the job is stopped with `errorCode` `max_credits_reached`. View the maximum at `GET /v1/simc/usage` under `plan.maxCreditsPerJob`. */
                                 maxCredits: number | null;
                                 /**
                                  * @deprecated
@@ -1446,20 +1458,26 @@ export interface operations {
                         result: {
                             summary: {
                                 /**
-                                 * @description The metric that `mean` and `mean_error` are reported in and that profilesets are ranked by. `dps` is the main actor's own damage (the default). `raid_dps` is the whole group's combined damage, returned when your input sets `profileset_metric=raid_dps`; in that case `mainActor.mean` is the group total.
+                                 * @description The metric that `mean` and `mean_error` are reported in and that profilesets are ranked by. `dps` is the main actor's own damage. `raid_dps` is the group's combined damage, returned when your input sets `profileset_metric=raid_dps`; `mainActor.mean` is then the group total.
                                  * @enum {string}
                                  */
                                 metric: "dps" | "raid_dps";
-                                /** @description Result for the headline actor (selected by SimC's `profileset_main_actor_index` directive, default `0`). When profileset results are available, this object also carries a `profilesets` block (`{ count, results }`) for the sweep over this actor; the block is omitted when no results are available (the input declared no profilesets, or none were produced). For multi-player sims using `copy=` or `set=`, per-player results for the remaining actors are in the JSON artifact — that multi-player case is separate from the profileset sweep. */
+                                /** @description Result for the headline actor (selected by SimC's `profileset_main_actor_index` directive, default `0`). */
                                 mainActor: {
                                     /** @description Actor name as defined in your profile. */
                                     name: string;
                                     /** @description Mean DPS across all iterations. */
                                     mean: number;
-                                    /** @description The ± DPS error on `mean` — the half-width of its 95% confidence interval, equal to `mean_stddev` × 1.96. This is the same error SimC reports. */
+                                    /** @description The ± DPS error on `mean` — the half-width of its 95% confidence interval, equal to `mean_stddev` × 1.96. */
                                     mean_error: number;
                                     /** @description Standard error of the mean DPS (the standard deviation of the mean estimate). */
                                     mean_stddev: number;
+                                    /** @description Standard deviation of DPS across iterations. */
+                                    stddev?: number;
+                                    /** @description Lowest single-iteration DPS. */
+                                    min?: number;
+                                    /** @description Highest single-iteration DPS. */
+                                    max?: number;
                                     /** @description Profileset sweep results scoped to this actor (mirrors SimC's `sim.profilesets` block shape). Omitted when no profileset results are available — either the input declared no profilesets, or none were produced. */
                                     profilesets?: {
                                         /** @description Total number of profilesets in the sim result. When this exceeds the length of `results`, the array was truncated to the top 200 entries by DPS. The full set is available in the JSON artifact. */
@@ -1470,15 +1488,66 @@ export interface operations {
                                             name: string;
                                             /** @description Mean DPS across all iterations. */
                                             mean: number;
-                                            /** @description The ± DPS error on `mean` — the half-width of its 95% confidence interval, equal to `mean_stddev` × 1.96. This is the same error SimC reports. */
+                                            /** @description The ± DPS error on `mean` — the half-width of its 95% confidence interval, equal to `mean_stddev` × 1.96. */
                                             mean_error: number;
                                             /** @description Standard error of the mean DPS (the standard deviation of the mean estimate). */
                                             mean_stddev: number;
-                                            /** @description For multistage runs, the highest stage this profileset reached — it was culled after this stage, or it survived to the final stage. Earlier stages run at a coarser `target_error`, so a result from an earlier stage carries a larger `mean_error` than a final-stage result. `1` for single-pass runs. */
+                                            /** @description Standard deviation of DPS across iterations. */
+                                            stddev?: number;
+                                            /** @description Lowest single-iteration DPS. */
+                                            min?: number;
+                                            /** @description Highest single-iteration DPS. */
+                                            max?: number;
+                                            /** @description For multistage runs, the highest stage this profileset reached. Earlier stages run at a coarser `target_error`, so their results carry a larger `mean_error`. `1` for single-pass runs. */
                                             stage: number;
                                         }[];
                                     };
                                 } | null;
+                                /** @description The talent build the run simulated for the headline actor, as an in-game export string. Omitted when the run produced no report. */
+                                talents?: string;
+                                /** @description The headline actor's equipped items, in the report's slot order. Each entry carries the ids the item was simulated with. Omitted when the run produced no report. */
+                                gear?: {
+                                    /** @description SimC slot name (`head`, `neck`, …, `main_hand`, `off_hand`). */
+                                    slot: string;
+                                    /** @description The item id. */
+                                    id: number;
+                                    /** @description SimC's snake_case item name. */
+                                    name: string;
+                                    /** @description The fully resolved item level the item was simulated at. */
+                                    ilevel?: number;
+                                    /** @description Bonus ids applied to the item. */
+                                    bonusIds?: number[];
+                                    /** @description Item ids of socketed gems. */
+                                    gemIds?: number[];
+                                    /** @description The item's enchant id. */
+                                    enchantId?: number;
+                                    /** @description A crafted item's chosen stat ids. */
+                                    craftedStatIds?: number[];
+                                }[];
+                                /** @description Per-actor results for a `copy=` comparison, where each actor runs as its own sim. Includes the baseline actor. Omitted for profileset sweeps and single-profile runs. */
+                                actors?: {
+                                    /** @description Total number of actors in the comparison. When this exceeds the length of `results`, the array was truncated to the top 200 entries by DPS. The full set is available in the JSON and CSV artifacts. */
+                                    count: number;
+                                    /** @description Per-actor entries, ranked by DPS (highest first). Truncated to the top 200 entries — see `count` and the JSON and CSV artifacts for the full set. */
+                                    results: {
+                                        /** @description Actor name as defined in your profile. */
+                                        name: string;
+                                        /** @description Mean DPS across all iterations. */
+                                        mean: number;
+                                        /** @description The ± DPS error on `mean` — the half-width of its 95% confidence interval, equal to `mean_stddev` × 1.96. */
+                                        mean_error: number;
+                                        /** @description Standard error of the mean DPS (the standard deviation of the mean estimate). */
+                                        mean_stddev: number;
+                                        /** @description Standard deviation of DPS across iterations. */
+                                        stddev?: number;
+                                        /** @description Lowest single-iteration DPS. */
+                                        min?: number;
+                                        /** @description Highest single-iteration DPS. */
+                                        max?: number;
+                                    }[];
+                                };
+                                /** @description The per-actor iteration count the run used. Omitted for multistage runs, which use a per-stage schedule. */
+                                iterations?: number;
                                 /** @description Multistage execution metadata. */
                                 multiStage: {
                                     /** @description Whether multistage execution ran. */
@@ -1496,7 +1565,7 @@ export interface operations {
                                         label: string;
                                         /** @description Number of profilesets executed in this stage. */
                                         profilesets: number;
-                                        /** @description Number of profilesets eliminated at the end of this stage based on ranking. These do not advance to the next stage. The last executed stage always reports `0` (no culling occurs after the last stage). */
+                                        /** @description Number of profilesets eliminated at the end of this stage based on ranking. `0` for the last executed stage. */
                                         culled: number;
                                     }[];
                                 };
@@ -1509,7 +1578,7 @@ export interface operations {
                                  */
                                 url: string;
                                 /**
-                                 * @description Machine-readable artifact category. `html_report`: human-readable HTML report. `json_report`: machine-readable JSON results. `csv_report`: per-profileset DPS table (`result.csv`, columns `name,dps_mean,dps_min,dps_max,dps_std_dev,dps_mean_std_dev`); a single job-level artifact (`stage` null) covering every profileset across all stages. `input`: the exact SimC input your job ran. `stdout_log` / `stderr_log`: raw SimC logs. Under multistage execution html/json artifacts are identified by `kind` together with `stage` (the same `kind` appears once per stage); `stage` is null for single-run jobs and for `csv_report`.
+                                 * @description Machine-readable artifact category. `html_report`: HTML report. `json_report`: JSON results. `csv_report`: flat DPS table (`result.csv`), one row per actor then one row per profileset. `input`: the exact SimC input your job ran. `stdout_log` / `stderr_log`: SimC logs; consecutive duplicate lines in `stderr_log` are collapsed with a repeat count. For multistage runs, html and json artifacts repeat once per stage — identify them by `kind` together with `stage`.
                                  * @enum {string}
                                  */
                                 kind: "html_report" | "json_report" | "csv_report" | "input" | "stdout_log" | "stderr_log";
@@ -1750,7 +1819,7 @@ export interface operations {
                         progress: {
                             /** @description Estimated completion percentage (0–100). Null when not yet running. */
                             percent: number | null;
-                            /** @description Stage progress detail while the job is running. Null before the job starts running and once it reaches a terminal state. Single-pass jobs report `{ current: 1, total: 1, label: "initial" }` with `percent` populated while running. */
+                            /** @description Stage progress detail while the job is running. Null before the job starts and once it reaches a terminal state. Single-pass jobs report `{ current: 1, total: 1, label: "initial" }`. */
                             stage: {
                                 /** @description Current stage (1-indexed). */
                                 current: number;
@@ -1762,10 +1831,10 @@ export interface operations {
                                 percent: number;
                             } | null;
                         };
-                        /** @description Recent log lines from SimC stdout and stderr while the job is running. Each entry is tagged with its stream (`source`) and capture time (`ts`). Full logs are available as downloadable artifacts once the job completes. Null when not running or not requested via `include=logEntries`. */
+                        /** @description Recent log lines from SimC stdout and stderr while the job is running. Full logs are available as artifacts once the job completes. Null when not running or not requested via `include=logEntries`. */
                         logEntries: {
                             /**
-                             * @description Which stream the line came from. `stderr` lines are diagnostic output — SimC warnings, errors, and notes. `stdout` lines are sim output, progress markers, and results.
+                             * @description Which stream the line came from. `stderr` carries SimC warnings, errors, and notes; `stdout` carries sim output, progress markers, and results.
                              * @enum {string}
                              */
                             source: "stdout" | "stderr";
@@ -2042,7 +2111,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Your usage summary, including both period-based metrics and live snapshot counters. */
+            /** @description Your usage summary. */
             200: {
                 headers: {
                     /** @description Your in-flight job count at the time of this response. */
@@ -2215,7 +2284,7 @@ export interface operations {
                     "application/json": {
                         /** @description Total purchased credit balance. Purchased credits do not expire. */
                         purchased: number;
-                        /** @description Credits currently held against your in-flight jobs. Refunded on settlement (any unused amount returns to `purchased` and `grants[].remaining`). Excluded from `purchased` and `grants[].remaining`. */
+                        /** @description Credits currently held against your in-flight jobs, excluded from `purchased` and `grants[].remaining`. Any unused amount returns to them on settlement. */
                         reserved: number;
                         /** @description Your active grants, ordered by expiry (soonest first; grants without expiry last). Empty when no grants are active. */
                         grants: {

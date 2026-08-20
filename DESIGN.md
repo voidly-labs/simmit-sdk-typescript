@@ -1,4 +1,4 @@
-# Simmit TypeScript SDK: v1 Design (revision 2.8)
+# Simmit TypeScript SDK: v1 Design (revision 2.9)
 
 Scope: public surface and foundations only, a design proposal, not an implementation.
 Convention reference: `anthropic-sdk-typescript`; where this doc is silent, that SDK's idiom is
@@ -196,7 +196,7 @@ unknown keys reject: accurate generated types are load-bearing, not decorative):
 
 ```ts
 {
-  build: { channel: 'nightly' | 'weekly' | 'latest'; gitBranch?: 'midnight' }
+  build: { channel: 'nightly' | 'weekly' | 'latest'; gitBranch?: 'midnight'; id?: string }
   profile: { text: string }                      // ≤ 2 MB UTF-8
   runtime?: { multiStage?: boolean; maxCredits?: number; maxRuntimeSeconds?: number /* deprecated → maxCredits */; maxQueueSeconds?: number }
   priority?: 'background' | 'standard' | 'high'  // enum + prose agree as of 1.14.0
@@ -524,6 +524,15 @@ Prerequisites (upstream): `kind` is now enumerated in the spec (§8.14, shipped 
 excluded (as in §9): downloading/parsing the report bytes and the versioned v2/v3 report schema.
 
 ## CHANGELOG
+
+rev 2.8 → rev 2.9 (spec 1.19.1):
+
+- Re-vendor (additive, non-breaking). Job create accepts `build.id` (uuid) to pin a specific build,
+  alongside `channel`; if the pinned build is unavailable at run time the job falls back to `channel`.
+  The result summary gains per-actor `stddev`/`min`/`max`, `talents`, and `gear`. All flow through the
+  generated types (`JobCreateParams`, `JobResult`).
+- Job-submit 422 gains `build_pin_not_allowed` and `build_pin_unavailable` codes (with `buildId` and
+  `maxPinAgeDays` meta). Both degrade to `UnprocessableEntityError`, with the specific code on `.code`.
 
 rev 2.7 → rev 2.8 (spec 1.14.0, credit model):
 
