@@ -156,6 +156,12 @@ export class APIError<
       if (code === 'too_many_variants') {
         return new TooManyVariantsError(422, body, message, headers)
       }
+      if (code === 'build_pin_not_allowed') {
+        return new BuildPinNotAllowedError(422, body, message, headers)
+      }
+      if (code === 'build_pin_unavailable') {
+        return new BuildPinUnavailableError(422, body, message, headers)
+      }
       if (code === 'result_unavailable') {
         return new ResultUnavailableError(422, body, message, headers)
       }
@@ -277,6 +283,30 @@ export class TooManyVariantsError extends UnprocessableEntityError {
     maxVariants: number
     /** Account page where higher variant limits are available. */
     upgradeUrl: string
+  }
+}
+
+export class BuildPinNotAllowedError extends UnprocessableEntityError {
+  declare readonly code: 'build_pin_not_allowed'
+  declare readonly meta: {
+    reason: 'build_pin_not_allowed'
+    message: string
+    docsUrl: string
+    /** The rejected build.id, when the submission included one. */
+    buildId?: string
+  }
+}
+
+export class BuildPinUnavailableError extends UnprocessableEntityError {
+  declare readonly code: 'build_pin_unavailable'
+  declare readonly meta: {
+    reason: 'build_pin_unavailable'
+    message: string
+    docsUrl: string
+    /** The rejected build.id. */
+    buildId?: string
+    /** Maximum age of a pinnable build, in days. */
+    maxPinAgeDays?: number
   }
 }
 

@@ -1,4 +1,4 @@
-# Simmit TypeScript SDK: v1 Design (revision 2.9)
+# Simmit TypeScript SDK: v1 Design (revision 2.10)
 
 Scope: public surface and foundations only, a design proposal, not an implementation.
 Convention reference: `anthropic-sdk-typescript`; where this doc is silent, that SDK's idiom is
@@ -269,6 +269,8 @@ SimmitError extends Error
 │   ├── UnprocessableEntityError           422 · code: string
 │   │   ├── InvalidProfileError            422 · code: 'input_sanitized_rejected'
 │   │   ├── TooManyVariantsError           422 · code: 'too_many_variants' (input over variant cap)
+│   │   ├── BuildPinNotAllowedError        422 · code: 'build_pin_not_allowed' (plan lacks build pinning)
+│   │   ├── BuildPinUnavailableError       422 · code: 'build_pin_unavailable' (pinned build unusable)
 │   │   └── ResultUnavailableError         422 · code: 'result_unavailable' (terminal, no result)
 │   ├── RateLimitError                     429 · code: 'rate_limit_exceeded' · meta: { scope: 'developer' }
 │   │   └── MaxActiveJobsError             429 · code: 'max_active_jobs_exceeded'
@@ -321,6 +323,14 @@ export class InvalidProfileError extends UnprocessableEntityError {
 export class TooManyVariantsError extends UnprocessableEntityError {
   readonly code: 'too_many_variants'
   readonly meta: { reason: 'too_many_variants'; message: string; totalVariants: number; maxVariants: number; upgradeUrl: string }
+}
+export class BuildPinNotAllowedError extends UnprocessableEntityError {
+  readonly code: 'build_pin_not_allowed'
+  readonly meta: { reason: 'build_pin_not_allowed'; message: string; docsUrl: string; buildId?: string }
+}
+export class BuildPinUnavailableError extends UnprocessableEntityError {
+  readonly code: 'build_pin_unavailable'
+  readonly meta: { reason: 'build_pin_unavailable'; message: string; docsUrl: string; buildId?: string; maxPinAgeDays?: number }
 }
 
 // The remaining single-code subclasses follow the same pattern; their exact metas:
@@ -524,6 +534,13 @@ Prerequisites (upstream): `kind` is now enumerated in the spec (§8.14, shipped 
 excluded (as in §9): downloading/parsing the report bytes and the versioned v2/v3 report schema.
 
 ## CHANGELOG
+
+rev 2.9 → rev 2.10 (build-pin error subclasses):
+
+- Map the job-submit 422 codes `build_pin_not_allowed` and `build_pin_unavailable` to
+  `BuildPinNotAllowedError` and `BuildPinUnavailableError` (they degraded to `UnprocessableEntityError`
+  in rev 2.9). Both narrow `meta` to `reason`/`message`/`docsUrl` plus `buildId?`; the unavailable case
+  also carries `maxPinAgeDays?`. Unmapped 422 codes still degrade to the base class.
 
 rev 2.8 → rev 2.9 (spec 1.19.1):
 
