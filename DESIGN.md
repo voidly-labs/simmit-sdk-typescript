@@ -1,4 +1,4 @@
-# Simmit TypeScript SDK: v1 Design (revision 2.10)
+# Simmit TypeScript SDK: v1 Design (revision 2.11)
 
 Scope: public surface and foundations only, a design proposal, not an implementation.
 Convention reference: `anthropic-sdk-typescript`; where this doc is silent, that SDK's idiom is
@@ -534,6 +534,12 @@ Prerequisites (upstream): `kind` is now enumerated in the spec (§8.14, shipped 
 excluded (as in §9): downloading/parsing the report bytes and the versioned v2/v3 report schema.
 
 ## CHANGELOG
+
+rev 2.10 → rev 2.11 (spec 1.20.1):
+
+- Re-vendor (additive, non-breaking). `JobErrorCode` gains `credits_exhausted`. `runtime.maxCredits`
+  is now documented as an optional spend cap (when omitted, the job reserves credits as it runs); the
+  type is unchanged. All flows through the generated types, no hand-written change.
 
 rev 2.9 → rev 2.10 (build-pin error subclasses):
 
