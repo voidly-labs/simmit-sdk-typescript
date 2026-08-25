@@ -21,7 +21,7 @@ export interface paths {
          * Submit a new SimC sim
          * @description Submits a new SimC sim to the queue. Returns immediately with a job ID; the sim runs asynchronously. Use the ID to poll status, fetch the final result, and download any artifacts.
          *
-         *     The job's credit budget (`runtime.maxCredits`, plus any priority fee) is held from your balance at submission and reconciled against actual usage on completion. See "Credits → Job budgets" in the documentation for details.
+         *     Submitting reserves credits from your balance: a small starting reservation that grows as the sim runs, or the full `runtime.maxCredits` plus any priority fee when you set a spend cap. Actual usage is reconciled on completion and unused reserved credits are refunded. See "Credits → Job budgets" in the documentation for details.
          */
         post: operations["createJob"];
         delete?: never;
@@ -370,7 +370,7 @@ export interface operations {
                             /** Format: date-time */
                             completedAt: string | null;
                             /** @enum {string|null} */
-                            errorCode: "execution_interrupted" | "execution_timeout" | "max_credits_reached" | "execution_failed" | "build_unavailable" | "simulation_error" | "queue_timeout" | "input_invalid" | "insufficient_credits" | "user_cancelled" | "internal" | null;
+                            errorCode: "execution_interrupted" | "execution_timeout" | "max_credits_reached" | "credits_exhausted" | "execution_failed" | "build_unavailable" | "simulation_error" | "queue_timeout" | "input_invalid" | "insufficient_credits" | "user_cancelled" | "internal" | null;
                             /** @description Opaque metadata echoed back exactly as submitted. Not used for scheduling or sim execution. */
                             metadata: {
                                 [key: string]: unknown;
@@ -476,18 +476,17 @@ export interface operations {
                     /**
                      * @description Execution options for this job. Multistage execution is skipped if your input contains unsupported patterns or directives.
                      * @example {
-                     *       "multiStage": true,
-                     *       "maxCredits": 24000
+                     *       "multiStage": true
                      *     }
                      */
                     runtime?: {
                         /** @description Opt-in to multistage execution with automatic culling between stages. When false or omitted, the sim runs in a single pass. */
                         multiStage?: boolean;
-                        /** @description Credit budget for this job. A job whose usage reaches the budget is stopped with `errorCode` `max_credits_reached` and billed the budget. Defaults to 9600 credits when omitted; the maximum is `plan.maxCreditsPerJob` on `GET /v1/simc/usage`. */
+                        /** @description Optional spend cap for this job, in credits. When set, the full cap plus any priority fee is reserved at submission, and a job that reaches it is stopped with `errorCode` `max_credits_reached` and billed the cap; when omitted, the job reserves credits as it runs. The ceiling applied is returned in the response as `runtime.ceiling.maxCredits`; the maximum is `plan.maxCreditsPerJob` on `GET /v1/simc/usage`. */
                         maxCredits?: number;
                         /**
                          * @deprecated
-                         * @description Deprecated: use `maxCredits`. Interpreted as a credit budget of this many seconds at the basis rate of 32 credits per second (`maxCredits = maxRuntimeSeconds × 32`). Do not send both fields.
+                         * @description Deprecated: use `maxCredits`. Interpreted as a spend cap of this many seconds at the basis rate of 32 credits per second (`maxCredits = maxRuntimeSeconds × 32`). Do not send both fields.
                          */
                         maxRuntimeSeconds?: number;
                         /** @description Maximum time this job may wait in the queue before being auto-cancelled, in seconds. Defaults to your plan's queue window when omitted; see `plan.defaultQueueSeconds` and the `plan.maxQueueSeconds` maximum on `GET /v1/simc/usage`. The ceiling applied is returned in the response as `runtime.ceiling.queueSeconds`. */
@@ -580,11 +579,11 @@ export interface operations {
                         id: string;
                         runtime: {
                             ceiling: {
-                                /** @description The credit budget that applied to this run: the usage at which the job is stopped with `errorCode` `max_credits_reached`. View the maximum at `GET /v1/simc/usage` under `plan.maxCreditsPerJob`. */
+                                /** @description The per-job credit ceiling that applied to this run: the usage at which the job is stopped with `errorCode` `max_credits_reached`. Your `runtime.maxCredits` when the submission set one; otherwise the plan ceiling (`plan.maxCreditsPerJob` on `GET /v1/simc/usage`). */
                                 maxCredits: number | null;
                                 /**
                                  * @deprecated
-                                 * @description Deprecated: use `maxCredits`. The budget expressed in seconds at the basis rate of 32 credits per second.
+                                 * @description Deprecated: use `maxCredits`. The same ceiling expressed in seconds at the basis rate of 32 credits per second.
                                  */
                                 runtimeSeconds: number | null;
                                 /** @description The queue timeout ceiling that applied to this run, in seconds. Jobs that wait in the queue longer than this are auto-cancelled with `errorCode` `queue_timeout`. View the maximum at `GET /v1/simc/usage` under `plan.maxQueueSeconds`. */
@@ -681,7 +680,7 @@ export interface operations {
                         code: string;
                         meta: {
                             reason: string;
-                            /** @description The credit budget the rejected submission would have run under. */
+                            /** @description The per-job credit ceiling the rejected submission would have run under: your `runtime.maxCredits` if set, otherwise the plan ceiling. */
                             ceilingMaxCredits?: number;
                             /** @description Largest `runtime.maxCredits` your current balance covers (after any priority fee). */
                             maxAffordableCredits?: number;
@@ -1244,7 +1243,7 @@ export interface operations {
                          */
                         cancelRequestedAt: string | null;
                         /** @enum {string|null} */
-                        errorCode: "execution_interrupted" | "execution_timeout" | "max_credits_reached" | "execution_failed" | "build_unavailable" | "simulation_error" | "queue_timeout" | "input_invalid" | "insufficient_credits" | "user_cancelled" | "internal" | null;
+                        errorCode: "execution_interrupted" | "execution_timeout" | "max_credits_reached" | "credits_exhausted" | "execution_failed" | "build_unavailable" | "simulation_error" | "queue_timeout" | "input_invalid" | "insufficient_credits" | "user_cancelled" | "internal" | null;
                         /** @description Human-readable explanation for the terminal status, paired with `errorCode`. */
                         statusReason: string | null;
                         /** @description SimC process exit code. */
@@ -1269,11 +1268,11 @@ export interface operations {
                             /** @description vCPU count of the machine this run executed on. Null before execution. */
                             vcpus: number | null;
                             ceiling: {
-                                /** @description The credit budget that applied to this run: the usage at which the job is stopped with `errorCode` `max_credits_reached`. View the maximum at `GET /v1/simc/usage` under `plan.maxCreditsPerJob`. */
+                                /** @description The per-job credit ceiling that applied to this run: the usage at which the job is stopped with `errorCode` `max_credits_reached`. Your `runtime.maxCredits` when the submission set one; otherwise the plan ceiling (`plan.maxCreditsPerJob` on `GET /v1/simc/usage`). */
                                 maxCredits: number | null;
                                 /**
                                  * @deprecated
-                                 * @description Deprecated: use `maxCredits`. The budget expressed in seconds at the basis rate of 32 credits per second.
+                                 * @description Deprecated: use `maxCredits`. The same ceiling expressed in seconds at the basis rate of 32 credits per second.
                                  */
                                 runtimeSeconds: number | null;
                                 /** @description The queue timeout ceiling that applied to this run, in seconds. Jobs that wait in the queue longer than this are auto-cancelled with `errorCode` `queue_timeout`. View the maximum at `GET /v1/simc/usage` under `plan.maxQueueSeconds`. */
@@ -1395,7 +1394,7 @@ export interface operations {
                          */
                         cancelRequestedAt: string | null;
                         /** @enum {string|null} */
-                        errorCode: "execution_interrupted" | "execution_timeout" | "max_credits_reached" | "execution_failed" | "build_unavailable" | "simulation_error" | "queue_timeout" | "input_invalid" | "insufficient_credits" | "user_cancelled" | "internal" | null;
+                        errorCode: "execution_interrupted" | "execution_timeout" | "max_credits_reached" | "credits_exhausted" | "execution_failed" | "build_unavailable" | "simulation_error" | "queue_timeout" | "input_invalid" | "insufficient_credits" | "user_cancelled" | "internal" | null;
                         /** @description Human-readable explanation for the terminal status, paired with `errorCode`. */
                         statusReason: string | null;
                         /** @description SimC process exit code. */
@@ -1420,11 +1419,11 @@ export interface operations {
                             /** @description vCPU count of the machine this run executed on. Null before execution. */
                             vcpus: number | null;
                             ceiling: {
-                                /** @description The credit budget that applied to this run: the usage at which the job is stopped with `errorCode` `max_credits_reached`. View the maximum at `GET /v1/simc/usage` under `plan.maxCreditsPerJob`. */
+                                /** @description The per-job credit ceiling that applied to this run: the usage at which the job is stopped with `errorCode` `max_credits_reached`. Your `runtime.maxCredits` when the submission set one; otherwise the plan ceiling (`plan.maxCreditsPerJob` on `GET /v1/simc/usage`). */
                                 maxCredits: number | null;
                                 /**
                                  * @deprecated
-                                 * @description Deprecated: use `maxCredits`. The budget expressed in seconds at the basis rate of 32 credits per second.
+                                 * @description Deprecated: use `maxCredits`. The same ceiling expressed in seconds at the basis rate of 32 credits per second.
                                  */
                                 runtimeSeconds: number | null;
                                 /** @description The queue timeout ceiling that applied to this run, in seconds. Jobs that wait in the queue longer than this are auto-cancelled with `errorCode` `queue_timeout`. View the maximum at `GET /v1/simc/usage` under `plan.maxQueueSeconds`. */
@@ -1797,7 +1796,7 @@ export interface operations {
                          * @description Machine-readable error code for the terminal state. Null when the job is not terminal or completed successfully.
                          * @enum {string|null}
                          */
-                        errorCode: "execution_interrupted" | "execution_timeout" | "max_credits_reached" | "execution_failed" | "build_unavailable" | "simulation_error" | "queue_timeout" | "input_invalid" | "insufficient_credits" | "user_cancelled" | "internal" | null;
+                        errorCode: "execution_interrupted" | "execution_timeout" | "max_credits_reached" | "credits_exhausted" | "execution_failed" | "build_unavailable" | "simulation_error" | "queue_timeout" | "input_invalid" | "insufficient_credits" | "user_cancelled" | "internal" | null;
                         /** @description Human-readable explanation paired with `errorCode`. Null when the job is not terminal or no additional detail is available. */
                         statusReason: string | null;
                         /** @description SimC process exit code. Null when the job is not terminal. */
@@ -2161,9 +2160,9 @@ export interface operations {
                         plan: {
                             /** @description Maximum jobs your account can have in flight. */
                             maxActiveJobs: number | null;
-                            /** @description Largest credit budget (`runtime.maxCredits`) a job submission may request. */
+                            /** @description Per-job credit ceiling: the largest spend cap (`runtime.maxCredits`) a submission may request, and the most a submission without one can spend. */
                             maxCreditsPerJob: number | null;
-                            /** @description Credit budget applied when a submission omits `runtime.maxCredits`. */
+                            /** @description The same per-job ceiling as `maxCreditsPerJob`, kept for compatibility. */
                             defaultCreditsPerJob: number | null;
                             /**
                              * @deprecated
@@ -2172,14 +2171,14 @@ export interface operations {
                             maxRuntimeSeconds: number | null;
                             /**
                              * @deprecated
-                             * @description Deprecated: use `defaultCreditsPerJob`. The same default expressed in seconds at the basis rate of 32 credits per second.
+                             * @description Deprecated: `defaultCreditsPerJob` expressed in seconds at the basis rate of 32 credits per second.
                              */
                             defaultRuntimeSeconds: number | null;
                             /** @description Maximum time in seconds a job may wait in the queue before being cancelled. */
                             maxQueueSeconds: number | null;
                             /** @description Default queue wait per job in seconds. */
                             defaultQueueSeconds: number | null;
-                            /** @description Metering rate for your jobs, in credits per second of SimC runtime. Usage accrues at this rate while a sim runs, so a budget of `runtime.maxCredits` buys about `maxCredits / creditsPerSecond` seconds. The rate applied to a finished run is reported on the job as `runtime.creditsPerSecond`. */
+                            /** @description Metering rate for your jobs, in credits per second of SimC runtime. Usage accrues at this rate while a sim runs, so a spend cap of `runtime.maxCredits` buys about `maxCredits / creditsPerSecond` seconds. The rate applied to a finished run is reported on the job as `runtime.creditsPerSecond`. */
                             creditsPerSecond: number;
                             /** @description vCPUs allocated to each job. Determines how fast a sim completes; billing uses `creditsPerSecond`. */
                             vcpuPerJob: number;
@@ -2202,9 +2201,9 @@ export interface operations {
                         limits: {
                             /** @description Maximum jobs your account can have in flight. */
                             maxActiveJobs: number | null;
-                            /** @description Largest credit budget (`runtime.maxCredits`) a job submission may request. */
+                            /** @description Per-job credit ceiling: the largest spend cap (`runtime.maxCredits`) a submission may request, and the most a submission without one can spend. */
                             maxCreditsPerJob: number | null;
-                            /** @description Credit budget applied when a submission omits `runtime.maxCredits`. */
+                            /** @description The same per-job ceiling as `maxCreditsPerJob`, kept for compatibility. */
                             defaultCreditsPerJob: number | null;
                             /**
                              * @deprecated
@@ -2213,14 +2212,14 @@ export interface operations {
                             maxRuntimeSeconds: number | null;
                             /**
                              * @deprecated
-                             * @description Deprecated: use `defaultCreditsPerJob`. The same default expressed in seconds at the basis rate of 32 credits per second.
+                             * @description Deprecated: `defaultCreditsPerJob` expressed in seconds at the basis rate of 32 credits per second.
                              */
                             defaultRuntimeSeconds: number | null;
                             /** @description Maximum time in seconds a job may wait in the queue before being cancelled. */
                             maxQueueSeconds: number | null;
                             /** @description Default queue wait per job in seconds. */
                             defaultQueueSeconds: number | null;
-                            /** @description Metering rate for your jobs, in credits per second of SimC runtime. Usage accrues at this rate while a sim runs, so a budget of `runtime.maxCredits` buys about `maxCredits / creditsPerSecond` seconds. The rate applied to a finished run is reported on the job as `runtime.creditsPerSecond`. */
+                            /** @description Metering rate for your jobs, in credits per second of SimC runtime. Usage accrues at this rate while a sim runs, so a spend cap of `runtime.maxCredits` buys about `maxCredits / creditsPerSecond` seconds. The rate applied to a finished run is reported on the job as `runtime.creditsPerSecond`. */
                             creditsPerSecond: number;
                             /** @description vCPUs allocated to each job. Determines how fast a sim completes; billing uses `creditsPerSecond`. */
                             vcpuPerJob: number;
