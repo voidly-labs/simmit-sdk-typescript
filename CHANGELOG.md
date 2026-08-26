@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.10.0...v0.11.0) (2026-08-25)
+
+
+### Features
+
+* adopt spec 1.20.1 (credits_exhausted job error code) ([#71](https://github.com/voidly-labs/simmit-sdk-typescript/issues/71)) ([0434a8b](https://github.com/voidly-labs/simmit-sdk-typescript/commit/0434a8ba4b975b5ef11aa5abb0e79667b95ddd97))
+
 ## [0.10.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.9.0...v0.10.0) (2026-08-20)
 
 
