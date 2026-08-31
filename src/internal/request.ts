@@ -25,6 +25,8 @@ export interface RequestSpec {
   method: 'GET' | 'POST'
   path: string
   body?: unknown
+  /** Query parameters appended to the URL. `undefined` values are skipped. */
+  query?: Record<string, string | number | boolean | undefined>
   /** POST job creation: auto-generate an idempotency-key when none supplied. */
   idempotent?: boolean
 }
@@ -33,6 +35,17 @@ export interface RequestSpec {
 const INITIAL_BACKOFF_MS = 500
 const MAX_BACKOFF_MS = 8_000
 const MAX_RETRY_AFTER_MS = 60_000
+
+function buildUrl(config: ClientConfig, spec: RequestSpec): string {
+  const url = `${config.baseURL.replace(/\/+$/, '')}${spec.path}`
+  if (!spec.query) return url
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(spec.query)) {
+    if (value !== undefined) params.append(key, String(value))
+  }
+  const qs = params.toString()
+  return qs ? `${url}?${qs}` : url
+}
 
 export function makeRequest<T>(
   config: ClientConfig,
@@ -50,7 +63,7 @@ async function run<T>(
   const maxRetries = options.maxRetries ?? config.maxRetries
   const timeout = options.timeout ?? config.timeout
   const headers = buildHeaders(config, spec, options)
-  const url = `${config.baseURL.replace(/\/+$/, '')}${spec.path}`
+  const url = buildUrl(config, spec)
   const body = spec.body === undefined ? undefined : JSON.stringify(spec.body)
 
   for (let attempt = 0; ; attempt++) {

@@ -1,4 +1,4 @@
-# Simmit TypeScript SDK: v1 Design (revision 2.11)
+# Simmit TypeScript SDK: v1 Design (revision 2.12)
 
 Scope: public surface and foundations only, a design proposal, not an implementation.
 Convention reference: `anthropic-sdk-typescript`; where this doc is silent, that SDK's idiom is
@@ -152,7 +152,7 @@ export class Jobs {
   get(jobId: string, options?: RequestOptions): APIPromise<Job>
   getStatus(
     jobId: string,
-    options?: RequestOptions
+    options?: JobStatusOptions
   ): APIPromise<JobStatusResponse>
   getResult(jobId: string, options?: RequestOptions): APIPromise<JobResult>
   getProfile(
@@ -183,6 +183,12 @@ export interface JobWaitOptions extends RequestOptions {
   onCreated?: (response: JobCreateResponse) => void
   /** Fired after every successful status poll (progress, stage, queue estimate). */
   onPoll?: (status: JobStatusResponse) => void
+}
+
+export type JobStatusInclude = 'logEntries'
+export interface JobStatusOptions extends RequestOptions {
+  /** Optional response fields, e.g. ['logEntries'] for structured stdout/stderr on a running job. */
+  include?: JobStatusInclude[]
 }
 ```
 
@@ -534,6 +540,14 @@ Prerequisites (upstream): `kind` is now enumerated in the spec (§8.14, shipped 
 excluded (as in §9): downloading/parsing the report bytes and the versioned v2/v3 report schema.
 
 ## CHANGELOG
+
+rev 2.11 → rev 2.12 (query params + status include):
+
+- Add query-parameter support to the internal request layer (`RequestSpec.query`, `undefined` values
+  skipped), and expose it on the first endpoint that needs it: `jobs.getStatus(jobId, { include:
+['logEntries'] })` requests the opt-in `logEntries` field (structured stdout/stderr for a running
+  job) via `?include=logEntries`. Adds `JobStatusOptions` / `JobStatusInclude`. Lays the groundwork
+  for `jobs.list()` (the `limit`/`cursor` params on `GET /v1/simc/jobs`).
 
 rev 2.10 → rev 2.11 (spec 1.20.1):
 

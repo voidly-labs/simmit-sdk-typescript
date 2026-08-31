@@ -64,9 +64,28 @@ describe('resource → _request wiring', () => {
 
     expect(spy).toHaveBeenCalledWith(
       { method: 'GET', path: '/v1/simc/jobs/519253542012420096/status' },
-      undefined
+      {}
     )
     expect(out).toBe(sentinel)
+  })
+
+  it('jobs.getStatus with include → adds the query, strips include from options', () => {
+    const client = makeClient()
+    const { spy } = spyRequest(client)
+
+    client.jobs.getStatus('519253542012420096', {
+      include: ['logEntries'],
+      timeout: 5000
+    })
+
+    expect(spy).toHaveBeenCalledWith(
+      {
+        method: 'GET',
+        path: '/v1/simc/jobs/519253542012420096/status',
+        query: { include: 'logEntries' }
+      },
+      { timeout: 5000 }
+    )
   })
 
   it('jobs.getResult → GET /v1/simc/jobs/{id}/result', () => {
@@ -178,6 +197,25 @@ describe('jobs.getStatus (end to end)', () => {
       'https://api.simmit.com/v1/simc/jobs/519253542012420096/status'
     )
     expect(init.method).toBe('GET')
+  })
+
+  it('sends include=logEntries as a query param', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ status: 'running', logEntries: [] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' }
+      })
+    )
+    const client = new Simmit({ secretKey: 'smt_sk_test', fetch: fetchMock })
+
+    await client.jobs.getStatus('519253542012420096', {
+      include: ['logEntries']
+    })
+
+    const [url] = fetchMock.mock.calls[0]!
+    expect(url).toBe(
+      'https://api.simmit.com/v1/simc/jobs/519253542012420096/status?include=logEntries'
+    )
   })
 })
 
