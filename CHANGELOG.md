@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.11.0...v0.12.0) (2026-08-31)
+
+
+### Features
+
+* **jobs:** add getStatus include option (logEntries) ([#73](https://github.com/voidly-labs/simmit-sdk-typescript/issues/73)) ([70dad2c](https://github.com/voidly-labs/simmit-sdk-typescript/commit/70dad2c3c9b440b8220e2e4cb41f6d7082e95150))
+
 ## [0.11.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.10.0...v0.11.0) (2026-08-25)
 
 
