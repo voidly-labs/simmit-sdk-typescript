@@ -16,6 +16,15 @@ export type JobCreateParams = NonNullable<
 
 export type JobCreateResponse = Ok<paths['/v1/simc/jobs']['post']>
 
+export type JobListParams = NonNullable<
+  paths['/v1/simc/jobs']['get']['parameters']['query']
+>
+
+export type JobListResponse = Ok<paths['/v1/simc/jobs']['get']>
+
+/** A single job in a `jobs.list()` page: a lighter summary than the full `Job`. */
+export type JobSummary = JobListResponse['jobs'][number]
+
 export type Job = Ok<paths['/v1/simc/jobs/{id}']['get']>
 
 export type JobStatus = Job['status']
