@@ -27,6 +27,14 @@ import {
 } from '../internal/poll'
 import { isTerminal } from '../status'
 
+/** Optional fields the status endpoint can add to its response. */
+export type JobStatusInclude = 'logEntries'
+
+export interface JobStatusOptions extends RequestOptions {
+  /** Optional fields to include in the response, e.g. `['logEntries']` for structured stdout/stderr on a running job. */
+  include?: JobStatusInclude[]
+}
+
 export interface JobWaitOptions extends RequestOptions {
   /** Initial delay between status polls, ms. Grows ×1.5 per poll to a 10s cap; values under 100 are raised to it. Default 1_000. */
   pollIntervalMs?: number
@@ -78,17 +86,20 @@ export class Jobs {
    * Fetch the live status of a job in any state: `status`, `errorCode`,
    * `progress`, and `queue` estimate. Unlike `getResult`, it never throws for a
    * non-terminal job, so it is the supported way to drive a custom poll loop.
+   * Pass `include: ['logEntries']` to add structured stdout/stderr for a running job.
    */
   getStatus(
     jobId: string,
-    options?: RequestOptions
+    options?: JobStatusOptions
   ): APIPromise<JobStatusResponse> {
+    const { include, ...requestOptions } = options ?? {}
     return this.#client._request<JobStatusResponse>(
       {
         method: 'GET',
-        path: `/v1/simc/jobs/${encodeURIComponent(jobId)}/status`
+        path: `/v1/simc/jobs/${encodeURIComponent(jobId)}/status`,
+        ...(include?.length ? { query: { include: include.join(',') } } : {})
       },
-      options
+      requestOptions
     )
   }
 

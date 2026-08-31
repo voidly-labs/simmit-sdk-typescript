@@ -72,6 +72,22 @@ describe('request basics', () => {
     expect(init.method).toBe('GET')
   })
 
+  it('appends query parameters, skipping undefined values', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, {}))
+    const client = makeClient(fetchMock)
+    await settle(
+      client._request({
+        method: 'GET',
+        path: '/v1/simc/jobs/abc/status',
+        query: { include: 'logEntries', dropped: undefined }
+      })
+    )
+    const [url] = fetchMock.mock.calls[0]!
+    expect(url).toBe(
+      'https://api.simmit.com/v1/simc/jobs/abc/status?include=logEntries'
+    )
+  })
+
   it('exposes the raw response via withResponse/asResponse', async () => {
     const fetchMock = vi
       .fn()

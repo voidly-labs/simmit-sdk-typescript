@@ -6,7 +6,12 @@ export * from './error'
 export type * from './api-types'
 // Resource classes are instantiated by the client (`client.jobs`, `client.credits`);
 // exported as types only so callers can annotate without constructing them.
-export type { Jobs, JobWaitOptions } from './resources/jobs'
+export type {
+  Jobs,
+  JobWaitOptions,
+  JobStatusOptions,
+  JobStatusInclude
+} from './resources/jobs'
 export type { Credits } from './resources/credits'
 export type { Artifacts } from './resources/artifacts'
 export type { Usage } from './resources/usage'
