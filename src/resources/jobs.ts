@@ -5,6 +5,8 @@ import type {
   JobCancelResponse,
   JobCreateParams,
   JobCreateResponse,
+  JobListParams,
+  JobListResponse,
   JobProfileResponse,
   JobResult,
   JobStatus,
@@ -70,6 +72,26 @@ export class Jobs {
   ): APIPromise<JobCreateResponse> {
     return this.#client._request<JobCreateResponse>(
       { method: 'POST', path: '/v1/simc/jobs', body: params, idempotent: true },
+      options
+    )
+  }
+
+  /**
+   * List your recent jobs, newest first. `params.limit` (default 25, max 100)
+   * and `params.cursor` (an earlier response's `page.nextCursor`) page the
+   * results. Each entry is a lighter `JobSummary`; use `get(id)` for the full
+   * record. `page.hasMore` and `page.nextCursor` drive the next request.
+   */
+  list(
+    params: JobListParams = {},
+    options?: RequestOptions
+  ): APIPromise<JobListResponse> {
+    return this.#client._request<JobListResponse>(
+      {
+        method: 'GET',
+        path: '/v1/simc/jobs',
+        query: { limit: params.limit, cursor: params.cursor }
+      },
       options
     )
   }

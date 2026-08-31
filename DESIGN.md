@@ -1,4 +1,4 @@
-# Simmit TypeScript SDK: v1 Design (revision 2.12)
+# Simmit TypeScript SDK: v1 Design (revision 2.13)
 
 Scope: public surface and foundations only, a design proposal, not an implementation.
 Convention reference: `anthropic-sdk-typescript`; where this doc is silent, that SDK's idiom is
@@ -121,11 +121,12 @@ compose: first to fire aborts (timeout → `APIConnectionTimeoutError`, retryabl
 
 ## 4. Resources and method signatures
 
-`api.md`-style listing. Types: `Job` · `JobCreateParams` · `JobCreateResponse` · `JobStatus` ·
+`api.md`-style listing. Types: `Job` · `JobCreateParams` · `JobCreateResponse` · `JobListParams` · `JobListResponse` · `JobSummary` · `JobStatus` ·
 `TerminalJobStatus` · `JobErrorCode` · `CompletedJob` · `JobResult` · `JobStatusResponse` · `JobProfileResponse` · `JobCancelResponse` ·
 `CreditBalance` · `CreditGrant` · `UsageResponse` · `UsagePeriod` · `UsageSnapshot` · `UsagePlan` · `UsageLimits` · `ArtifactUrl` · `Artifact` · `ArtifactKind` · `ArtifactMimeType` · `WebhookEvent`
 
 - <code title="post /v1/simc/jobs">client.jobs.create({ ...params }, options?) -> JobCreateResponse</code>
+- <code title="get /v1/simc/jobs">client.jobs.list({ limit?, cursor? }, options?) -> JobListResponse</code>
 - <code title="get /v1/simc/jobs/{id}">client.jobs.get(jobId, options?) -> Job</code>
 - <code title="get /v1/simc/jobs/{id}/status">client.jobs.getStatus(jobId, options?) -> JobStatusResponse</code>
 - <code title="get /v1/simc/jobs/{id}/result">client.jobs.getResult(jobId, options?) -> JobResult</code>
@@ -149,6 +150,10 @@ export class Jobs {
     params: JobCreateParams,
     options?: RequestOptions
   ): APIPromise<JobCreateResponse>
+  list(
+    params?: JobListParams,
+    options?: RequestOptions
+  ): APIPromise<JobListResponse>
   get(jobId: string, options?: RequestOptions): APIPromise<Job>
   getStatus(
     jobId: string,
@@ -476,9 +481,9 @@ now; §1 assumes the scope is ours.
   artifact references on `jobs.getResult`; downloading and parsing the report bytes does not.
   Artifact _selection_ (typed `kind`, stage-aware pickers) is designed in §10 for v1.x. Artifact
   identity is `kind + stage` under multistage, not `kind` alone.
-- **`jobs.list` + pagination:** a cursor contract now exists (`limit`/`cursor` →
-  `{ jobs, page: { limit, hasMore, nextCursor, since } }`). Exclusion is a scope choice, not an
-  API gap; the pagination idiom (Anthropic `Page` classes) lands with it.
+- **Auto-pagination:** `jobs.list()` ships in v1 (manual paging via `page.nextCursor`, see §4). An
+  auto-paginating iterator (Anthropic-style `Page` classes over the `{ jobs, page }` contract) is
+  additive, v1.x.
 - **`jobs.wait(jobId)`:** small, additive, v1.x. (`jobs.getStatus` ships in v1, see §4.)
 - **Builds endpoints:** read-mostly metadata, additive later. Named gap: the docs'
   bundled-profiles best practice depends on excluded `GET /v1/simc/builds`. Hand-rolled until v1.x.
@@ -540,6 +545,13 @@ Prerequisites (upstream): `kind` is now enumerated in the spec (§8.14, shipped 
 excluded (as in §9): downloading/parsing the report bytes and the versioned v2/v3 report schema.
 
 ## CHANGELOG
+
+rev 2.12 → rev 2.13 (jobs.list):
+
+- Add `client.jobs.list({ limit?, cursor? }, options?)` for `GET /v1/simc/jobs`: a page of recent
+  jobs newest-first (`{ jobs: JobSummary[], page: { limit, hasMore, nextCursor, since } }`), built on
+  the query-param support from rev 2.12. Adds `JobListParams` / `JobListResponse` / `JobSummary`.
+  Auto-pagination (a `Page` iterator) stays a v1.x follow-up (§9).
 
 rev 2.11 → rev 2.12 (query params + status include):
 

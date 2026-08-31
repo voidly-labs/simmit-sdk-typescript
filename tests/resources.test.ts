@@ -43,6 +43,23 @@ describe('resource → _request wiring', () => {
     expect(out).toBe(sentinel)
   })
 
+  it('jobs.list → GET /v1/simc/jobs with limit and cursor query', () => {
+    const client = makeClient()
+    const { spy, sentinel } = spyRequest(client)
+
+    const out = client.jobs.list({ limit: 50, cursor: 'c1' })
+
+    expect(spy).toHaveBeenCalledWith(
+      {
+        method: 'GET',
+        path: '/v1/simc/jobs',
+        query: { limit: 50, cursor: 'c1' }
+      },
+      undefined
+    )
+    expect(out).toBe(sentinel)
+  })
+
   it('jobs.get → GET /v1/simc/jobs/{id}', () => {
     const client = makeClient()
     const { spy, sentinel } = spyRequest(client)
@@ -216,6 +233,33 @@ describe('jobs.getStatus (end to end)', () => {
     expect(url).toBe(
       'https://api.simmit.com/v1/simc/jobs/519253542012420096/status?include=logEntries'
     )
+  })
+})
+
+describe('jobs.list (end to end)', () => {
+  it('returns a page and omits the query string when no params are given', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          jobs: [{ id: 'j1', status: 'completed' }],
+          page: {
+            limit: 25,
+            hasMore: false,
+            nextCursor: null,
+            since: '2026-01-01T00:00:00Z'
+          }
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      )
+    )
+    const client = new Simmit({ secretKey: 'smt_sk_test', fetch: fetchMock })
+
+    const result = await client.jobs.list()
+
+    expect(result.jobs).toHaveLength(1)
+    expect(result.page.nextCursor).toBeNull()
+    const [url] = fetchMock.mock.calls[0]!
+    expect(url).toBe('https://api.simmit.com/v1/simc/jobs')
   })
 })
 
