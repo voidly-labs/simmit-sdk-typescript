@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.13.0...v0.14.0) (2026-09-02)
+
+
+### Features
+
+* adopt spec 1.23.0 (profileset_results, actor_results artifacts) ([#77](https://github.com/voidly-labs/simmit-sdk-typescript/issues/77)) ([dec0b23](https://github.com/voidly-labs/simmit-sdk-typescript/commit/dec0b232cea6cbb41ceafb3ae3cec53aab89dfb2))
+
 ## [0.13.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.12.0...v0.13.0) (2026-08-31)
 
 
