@@ -1,4 +1,4 @@
-# Simmit TypeScript SDK: v1 Design (revision 2.13)
+# Simmit TypeScript SDK: v1 Design (revision 2.14)
 
 Scope: public surface and foundations only, a design proposal, not an implementation.
 Convention reference: `anthropic-sdk-typescript`; where this doc is silent, that SDK's idiom is
@@ -513,7 +513,7 @@ are closed enums (the spec enumerated both in 1.2.0, §8.14):
 export type Artifact = NonNullable<JobResult['result']>['artifacts'][number]
 //   { id: string; url: string; kind: ArtifactKind; mimeType: ArtifactMimeType; stage: number | null }
 export type ArtifactKind = Artifact['kind']
-//   'html_report' | 'json_report' | 'csv_report' | 'input' | 'stdout_log' | 'stderr_log'
+//   'html_report' | 'json_report' | 'csv_report' | 'profileset_results' | 'actor_results' | 'input' | 'stdout_log' | 'stderr_log'
 export type ArtifactMimeType = Artifact['mimeType']
 //   'application/json' | 'text/html' | 'text/csv' | 'text/plain'
 ```
@@ -545,6 +545,13 @@ Prerequisites (upstream): `kind` is now enumerated in the spec (§8.14, shipped 
 excluded (as in §9): downloading/parsing the report bytes and the versioned v2/v3 report schema.
 
 ## CHANGELOG
+
+rev 2.13 → rev 2.14 (spec 1.23.0):
+
+- Re-vendor (additive, non-breaking). `ArtifactKind` gains `profileset_results` (`profilesets.json`)
+  and `actor_results` (`actors.json`): the full ranked sets behind the result summary's top-200
+  `profilesets` / `actors` blocks. Flows through the generated types. Also folds in the description
+  reword from 1.21.1 that was skipped as non-substantive.
 
 rev 2.12 → rev 2.13 (jobs.list):
 

@@ -21,7 +21,7 @@ export interface paths {
          * Submit a new SimC sim
          * @description Submits a new SimC sim to the queue. Returns immediately with a job ID; the sim runs asynchronously. Use the ID to poll status, fetch the final result, and download any artifacts.
          *
-         *     Submitting reserves credits from your balance: a small starting reservation that grows as the sim runs, or the full `runtime.maxCredits` plus any priority fee when you set a spend cap. Actual usage is reconciled on completion and unused reserved credits are refunded. See "Credits → Job budgets" in the documentation for details.
+         *     Submitting reserves credits from your balance: a small starting reservation that grows as the sim runs, plus any priority fee. Actual usage is reconciled on completion and unused reserved credits are refunded. See "Credits → Job budgets" in the documentation for details.
          */
         post: operations["createJob"];
         delete?: never;
@@ -482,7 +482,7 @@ export interface operations {
                     runtime?: {
                         /** @description Opt-in to multistage execution with automatic culling between stages. When false or omitted, the sim runs in a single pass. */
                         multiStage?: boolean;
-                        /** @description Optional spend cap for this job, in credits. When set, the full cap plus any priority fee is reserved at submission, and a job that reaches it is stopped with `errorCode` `max_credits_reached` and billed the cap; when omitted, the job reserves credits as it runs. The ceiling applied is returned in the response as `runtime.ceiling.maxCredits`; the maximum is `plan.maxCreditsPerJob` on `GET /v1/simc/usage`. */
+                        /** @description Optional spend cap for this job, in credits. A job that reaches it is stopped with `errorCode` `max_credits_reached` and billed the cap. The ceiling applied is returned in the response as `runtime.ceiling.maxCredits`; the maximum is `plan.maxCreditsPerJob` on `GET /v1/simc/usage`. */
                         maxCredits?: number;
                         /**
                          * @deprecated
@@ -1479,9 +1479,9 @@ export interface operations {
                                     max?: number;
                                     /** @description Profileset sweep results scoped to this actor (mirrors SimC's `sim.profilesets` block shape). Omitted when no profileset results are available — either the input declared no profilesets, or none were produced. */
                                     profilesets?: {
-                                        /** @description Total number of profilesets in the sim result. When this exceeds the length of `results`, the array was truncated to the top 200 entries by DPS. The full set is available in the JSON artifact. */
+                                        /** @description Total number of profilesets in the sim result. When this exceeds the length of `results`, the array was truncated to the top 200 entries by DPS. The `profileset_results` artifact carries the full set. */
                                         count: number;
-                                        /** @description Profileset sweep entries, ranked by DPS (highest first). Truncated to the top 200 entries — see `count` and the JSON artifact for the full set. */
+                                        /** @description Profileset sweep entries, ranked by DPS (highest first). Truncated to the top 200 entries — see `count` and the `profileset_results` artifact for the full set. */
                                         results: {
                                             /** @description Profileset name as defined in your input. */
                                             name: string;
@@ -1525,9 +1525,9 @@ export interface operations {
                                 }[];
                                 /** @description Per-actor results for a `copy=` comparison, where each actor runs as its own sim. Includes the baseline actor. Omitted for profileset sweeps and single-profile runs. */
                                 actors?: {
-                                    /** @description Total number of actors in the comparison. When this exceeds the length of `results`, the array was truncated to the top 200 entries by DPS. The full set is available in the JSON and CSV artifacts. */
+                                    /** @description Total number of actors in the comparison. When this exceeds the length of `results`, the array was truncated to the top 200 entries by DPS. The `actor_results` artifact carries the full set. */
                                     count: number;
-                                    /** @description Per-actor entries, ranked by DPS (highest first). Truncated to the top 200 entries — see `count` and the JSON and CSV artifacts for the full set. */
+                                    /** @description Per-actor entries, ranked by DPS (highest first). Truncated to the top 200 entries — see `count` and the `actor_results` artifact for the full set. */
                                     results: {
                                         /** @description Actor name as defined in your profile. */
                                         name: string;
@@ -1577,10 +1577,10 @@ export interface operations {
                                  */
                                 url: string;
                                 /**
-                                 * @description Machine-readable artifact category. `html_report`: HTML report. `json_report`: JSON results. `csv_report`: flat DPS table (`result.csv`), one row per actor then one row per profileset. `input`: the exact SimC input your job ran. `stdout_log` / `stderr_log`: SimC logs; consecutive duplicate lines in `stderr_log` are collapsed with a repeat count. For multistage runs, html and json artifacts repeat once per stage — identify them by `kind` together with `stage`.
+                                 * @description Machine-readable artifact category. `html_report`: HTML report. `json_report`: JSON results. `csv_report`: flat DPS table (`result.csv`), one row per actor then one row per profileset. `profileset_results`: every profileset in the run (`profilesets.json`), ranked by the sim metric in the same row shape the result summary uses — present whenever a sweep produced results, and the way to read past the summary's top 200. `actor_results`: every actor of a `copy=`/`set=` comparison (`actors.json`), ranked the same way in the same row shape as the summary's `actors` block — present only for those runs, and the way to read past that block's top 200. `input`: the exact SimC input your job ran. `stdout_log` / `stderr_log`: SimC logs; consecutive duplicate lines in `stderr_log` are collapsed with a repeat count. For multistage runs, html and json artifacts repeat once per stage — identify them by `kind` together with `stage`.
                                  * @enum {string}
                                  */
-                                kind: "html_report" | "json_report" | "csv_report" | "input" | "stdout_log" | "stderr_log";
+                                kind: "html_report" | "json_report" | "csv_report" | "profileset_results" | "actor_results" | "input" | "stdout_log" | "stderr_log";
                                 /**
                                  * @description MIME type of the artifact content, drawn from a fixed set: `application/json`, `text/html`, `text/csv`, or `text/plain`.
                                  * @enum {string}
