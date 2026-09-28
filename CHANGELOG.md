@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.14.0...v0.15.0) (2026-09-28)
+
+
+### Features
+
+* adopt spec 1.24.1 (per-stage iterations, targetError) ([#79](https://github.com/voidly-labs/simmit-sdk-typescript/issues/79)) ([03e5d8e](https://github.com/voidly-labs/simmit-sdk-typescript/commit/03e5d8e56db124cf50138180901c70c7f4a41105))
+
 ## [0.14.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.13.0...v0.14.0) (2026-09-02)
 
 
