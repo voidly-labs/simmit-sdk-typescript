@@ -1,4 +1,4 @@
-# Simmit TypeScript SDK: v1 Design (revision 2.14)
+# Simmit TypeScript SDK: v1 Design (revision 2.15)
 
 Scope: public surface and foundations only, a design proposal, not an implementation.
 Convention reference: `anthropic-sdk-typescript`; where this doc is silent, that SDK's idiom is
@@ -545,6 +545,13 @@ Prerequisites (upstream): `kind` is now enumerated in the spec (§8.14, shipped 
 excluded (as in §9): downloading/parsing the report bytes and the versioned v2/v3 report schema.
 
 ## CHANGELOG
+
+rev 2.14 → rev 2.15 (spec 1.24.1):
+
+- Re-vendor (additive, non-breaking). The result summary's `multiStage.stages[]` entries gain
+  optional `iterations` (total iterations the stage's profilesets ran, excluding the headline
+  actor's own) and `targetError` (the `target_error` the stage ran at). Flows through the
+  generated types (`JobResult`), no hand-written change.
 
 rev 2.13 → rev 2.14 (spec 1.23.0):
 
