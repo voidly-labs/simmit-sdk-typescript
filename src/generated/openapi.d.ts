@@ -1566,6 +1566,10 @@ export interface operations {
                                         profilesets: number;
                                         /** @description Number of profilesets eliminated at the end of this stage based on ranking. `0` for the last executed stage. */
                                         culled: number;
+                                        /** @description Total iterations the profilesets in this stage ran, summed across them. Excludes the headline actor's own iterations. */
+                                        iterations?: number;
+                                        /** @description The `target_error` this stage ran at. */
+                                        targetError?: number;
                                     }[];
                                 };
                             } | null;
