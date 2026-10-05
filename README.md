@@ -114,7 +114,7 @@ try {
   if (err instanceof InvalidProfileError) {
     console.error(err.meta.blocked) // the rejected profile lines
   } else if (err instanceof InsufficientCreditsError) {
-    console.error(err.meta?.maxAffordableRuntimeSeconds)
+    console.error(err.meta?.maxAffordableCredits)
   } else {
     throw err
   }
