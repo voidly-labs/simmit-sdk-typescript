@@ -266,7 +266,13 @@ export class InvalidProfileError extends UnprocessableEntityError {
     message: string
     docsUrl: string
     /** Sample of rejected lines; see blockedCount/blockedTruncated for the full set. */
-    blocked: Array<{ line: number; text: string }>
+    blocked: Array<{
+      line: number
+      text: string
+      /** The directive the line matched (e.g. `output`, `save_*`), or `bare_input_token` for a line without `=`. */
+      directive: string
+      message: string
+    }>
     blockedCount: number
     blockedTruncated: boolean
   }

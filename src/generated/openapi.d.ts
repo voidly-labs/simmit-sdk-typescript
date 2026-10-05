@@ -30,6 +30,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/simc/profiles/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check a SimC profile
+         * @description Checks your SimC profile text against the rules `POST /v1/simc/jobs` applies to it, without submitting a sim. Returns the same rejections and warnings a submission of that text would. A partial profile works too, such as lines you add to every sim. It doesn't create a job or use credits.
+         */
+        post: operations["checkProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/simc/builds": {
         parameters: {
             query?: never;
@@ -470,7 +490,7 @@ export interface operations {
                         id?: string;
                     };
                     profile: {
-                        /** @description SimC profile text to execute (the content you would normally paste into a local simc run). Maximum 2 MB (UTF-8 encoded). */
+                        /** @description SimC profile text to execute (the content you would normally paste into a local simc run). Maximum 5 MB (UTF-8 encoded). */
                         text: string;
                     };
                     /**
@@ -511,7 +531,7 @@ export interface operations {
                     };
                     /** @description Optional per-job credentials. Used only for this job and never persisted. */
                     credentials?: {
-                        /** @description Battle.net API client ID. Must be provided together with `bnetClientSecret`. Lets SimC perform armory and guild imports, and resolve item data in your profile that is missing from the current build. */
+                        /** @description Battle.net API client ID. Must be provided together with `bnetClientSecret`. Lets SimC perform armory imports and resolve item data in your profile that is missing from the current build. */
                         bnetClientId?: string;
                         /** @description Battle.net API client secret. Must be provided together with `bnetClientId`. */
                         bnetClientSecret?: string;
@@ -593,7 +613,7 @@ export interface operations {
                             priorityFeeCredits?: number;
                         };
                         links: components["schemas"]["JobLinks"];
-                        /** @description Warnings about your input. Omitted when there are none. The job still runs at the clamped or floored value. */
+                        /** @description Warnings about your input. Omitted when there are none. The job still runs at the clamped or floored value. Lists the first 16 in line order, with the total in `warningsCount`. */
                         warnings?: {
                             /**
                              * @description Machine-readable warning category. `iterations_clamped` for `iterations=` values above the platform safety cap; `target_error_floored` for `target_error=` values below the platform safety floor.
@@ -609,6 +629,8 @@ export interface operations {
                             /** @description Human-readable explanation paired with `kind`. */
                             message: string;
                         }[];
+                        /** @description Total number of warnings about your input. Omitted when there are none. */
+                        warningsCount?: number;
                         /** @description Notices about deprecated request fields your submission used. Omitted when there are none. The job is unaffected. */
                         deprecations?: {
                             /** @description The deprecated request field, for example `runtime.maxRuntimeSeconds`. */
@@ -734,7 +756,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Your request body exceeds the 3 MB maximum. A profile over 2 MB returns code `profile_too_large` instead. */
+            /** @description Your request body exceeds the 6 MB maximum. A profile over 5 MB returns code `profile_too_large` instead. */
             413: {
                 headers: {
                     [name: string]: unknown;
@@ -780,6 +802,10 @@ export interface operations {
                             blocked: {
                                 line: number;
                                 text: string;
+                                /** @description The directive the line matched, such as `output` or `save_*`, or `bare_input_token` for a line without `=`. */
+                                directive: string;
+                                /** @description Human-readable explanation paired with `directive`. */
+                                message: string;
                             }[];
                             /** @description Total number of rejected lines. */
                             blockedCount: number;
@@ -922,6 +948,207 @@ export interface operations {
                         meta: {
                             /** @description Seconds to wait before retrying. */
                             retryAfterSeconds: number;
+                        };
+                        /**
+                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+        };
+    };
+    checkProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    profile: {
+                        /** @description SimC profile text to check. Maximum 5 MB (UTF-8 encoded). */
+                        text: string;
+                    };
+                    /** @description The Battle.net credentials your submission will carry. With them, `armory=` lines pass as they would on submit. Used only for this check and never persisted. */
+                    credentials?: {
+                        /** @description Battle.net API client ID. Must be provided together with `bnetClientSecret`. Lets SimC perform armory imports and resolve item data in your profile that is missing from the current build. */
+                        bnetClientId?: string;
+                        /** @description Battle.net API client secret. Must be provided together with `bnetClientId`. */
+                        bnetClientSecret?: string;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Your profile passes the checks a submission applies to it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        /** @description Warnings about your input. Omitted when there are none. A sim submitted with this profile runs at the clamped or floored value. Lists the first 16 in line order, with the total in `warningsCount`. */
+                        warnings?: {
+                            /**
+                             * @description Machine-readable warning category. `iterations_clamped` for `iterations=` values above the platform safety cap; `target_error_floored` for `target_error=` values below the platform safety floor.
+                             * @enum {string}
+                             */
+                            kind: "iterations_clamped" | "target_error_floored";
+                            /** @description 1-indexed line number in your input. */
+                            line: number;
+                            /** @description The value as written in your input. */
+                            requested: number;
+                            /** @description The clamped or floored value the sim runs with. */
+                            applied: number;
+                            /** @description Human-readable explanation paired with `kind`. */
+                            message: string;
+                        }[];
+                        /** @description Total number of warnings about your input. Omitted when there are none. */
+                        warningsCount?: number;
+                    };
+                };
+            };
+            /** @description Your request was missing required input or failed validation. See `error` for the specific issue. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        code: string;
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description Your API token is missing, invalid, or not authorized for this request. See `code` for the specific reason. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @enum {string} */
+                        code: "missing_token" | "invalid_token" | "revoked_token" | "expired_token";
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description Your request body exceeds the 6 MB maximum. A profile over 5 MB returns code `profile_too_large` instead. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        code: string;
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description Your profile would be rejected if submitted. `code` is `input_sanitized_rejected` when it contains directives Simmit does not allow, or `too_many_variants` when it expands past your account variant limit. `meta.message` explains the rejection. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @enum {string} */
+                        code: "input_sanitized_rejected" | "too_many_variants";
+                        meta: {
+                            /** @enum {string} */
+                            reason: "input_sanitized_rejected" | "too_many_variants";
+                            /** @description Human-readable explanation of why the input was rejected. */
+                            message: string;
+                            /**
+                             * Format: uri
+                             * @description Link to the documentation for this rejection.
+                             */
+                            docsUrl?: string;
+                            /** @description A sample of rejected lines. The full count may exceed the sample — see `blockedCount` and `blockedTruncated`. */
+                            blocked?: {
+                                line: number;
+                                text: string;
+                                /** @description The directive the line matched, such as `output` or `save_*`, or `bare_input_token` for a line without `=`. */
+                                directive: string;
+                                /** @description Human-readable explanation paired with `directive`. */
+                                message: string;
+                            }[];
+                            /** @description Total number of rejected lines. */
+                            blockedCount?: number;
+                            /** @description `true` when more lines were rejected than included in `blocked`. */
+                            blockedTruncated?: boolean;
+                            /** @description Simulated variants your input expands to, counting `profileset`, `copy`, and `set` directives. */
+                            totalVariants?: number;
+                            /** @description Maximum simulated variants per sim for your account. */
+                            maxVariants?: number;
+                            /**
+                             * Format: uri
+                             * @description Link to your account page, where an upgrade can be requested.
+                             */
+                            upgradeUrl?: string;
+                        };
+                        /**
+                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description Your account has exceeded its request rate. `Retry-After` carries the next-attempt time. */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before retrying. */
+                    "Retry-After": string;
+                    /** @description Correlation id for this request, present on every response. The same value is echoed in the `requestId` field of error bodies. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @enum {string} */
+                        code: "rate_limit_exceeded";
+                        meta: {
+                            /** @enum {string} */
+                            scope: "developer";
                         };
                         /**
                          * @description Correlation id for this request, also returned in the `X-Request-Id` response header.

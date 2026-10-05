@@ -15,6 +15,7 @@ export type {
 export type { Credits } from './resources/credits'
 export type { Artifacts } from './resources/artifacts'
 export type { Usage } from './resources/usage'
+export type { Profiles } from './resources/profiles'
 // Standalone webhook verification: no client (and no secret key) required.
 // WebhookEvent is exported from api-types, derived from the spec schema.
 export { unwrapWebhook } from './webhook'

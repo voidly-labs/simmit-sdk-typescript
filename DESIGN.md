@@ -1,4 +1,4 @@
-# Simmit TypeScript SDK: v1 Design (revision 2.15)
+# Simmit TypeScript SDK: v1 Design (revision 2.16)
 
 Scope: public surface and foundations only, a design proposal, not an implementation.
 Convention reference: `anthropic-sdk-typescript`; where this doc is silent, that SDK's idiom is
@@ -68,6 +68,7 @@ export default class Simmit {
   readonly credits: Credits
   readonly artifacts: Artifacts
   readonly usage: Usage
+  readonly profiles: Profiles
   constructor(options?: ClientOptions)
 }
 
@@ -92,8 +93,8 @@ export interface ClientOptions {
 }
 ```
 
-Deliberately omitted vs. Anthropic: `authToken`/OAuth, profiles, middleware, logging hooks. No
-v1 use case; surface added later is cheap, surface removed is not.
+Deliberately omitted vs. Anthropic: `authToken`/OAuth, config profiles, middleware, logging hooks.
+No v1 use case; surface added later is cheap, surface removed is not.
 
 ## 3. Per-request options and precedence
 
@@ -123,7 +124,7 @@ compose: first to fire aborts (timeout → `APIConnectionTimeoutError`, retryabl
 
 `api.md`-style listing. Types: `Job` · `JobCreateParams` · `JobCreateResponse` · `JobListParams` · `JobListResponse` · `JobSummary` · `JobStatus` ·
 `TerminalJobStatus` · `JobErrorCode` · `CompletedJob` · `JobResult` · `JobStatusResponse` · `JobProfileResponse` · `JobCancelResponse` ·
-`CreditBalance` · `CreditGrant` · `UsageResponse` · `UsagePeriod` · `UsageSnapshot` · `UsagePlan` · `UsageLimits` · `ArtifactUrl` · `Artifact` · `ArtifactKind` · `ArtifactMimeType` · `WebhookEvent`
+`CreditBalance` · `CreditGrant` · `UsageResponse` · `UsagePeriod` · `UsageSnapshot` · `UsagePlan` · `UsageLimits` · `ProfileCheckParams` · `ProfileCheckResponse` · `ArtifactUrl` · `Artifact` · `ArtifactKind` · `ArtifactMimeType` · `WebhookEvent`
 
 - <code title="post /v1/simc/jobs">client.jobs.create({ ...params }, options?) -> JobCreateResponse</code>
 - <code title="get /v1/simc/jobs">client.jobs.list({ limit?, cursor? }, options?) -> JobListResponse</code>
@@ -136,6 +137,7 @@ compose: first to fire aborts (timeout → `APIConnectionTimeoutError`, retryabl
 - <code title="get /v1/simc/credits">client.credits.get(options?) -> CreditBalance</code>
 - <code title="get /v1/simc/artifacts/{id}/url">client.artifacts.getUrl(artifactId, options?) -> ArtifactUrl</code>
 - <code title="get /v1/simc/usage">client.usage.get(options?) -> UsageResponse</code>
+- <code title="post /v1/simc/profiles/check">client.profiles.check({ ...params }, options?) -> ProfileCheckResponse</code>
 
 Standalone status helpers (pure, no client; for the decoupled and webhook flows where consumers branch on a job's state):
 
@@ -208,7 +210,7 @@ unknown keys reject: accurate generated types are load-bearing, not decorative):
 ```ts
 {
   build: { channel: 'nightly' | 'weekly' | 'latest'; gitBranch?: 'midnight'; id?: string }
-  profile: { text: string }                      // ≤ 2 MB UTF-8
+  profile: { text: string }                      // ≤ 5 MB UTF-8
   runtime?: { multiStage?: boolean; maxCredits?: number; maxRuntimeSeconds?: number /* deprecated → maxCredits */; maxQueueSeconds?: number }
   priority?: 'background' | 'standard' | 'high'  // enum + prose agree as of 1.14.0
   metadata?: Record<string, string>              // echoed back; excluded from idempotency digest (§6)
@@ -328,7 +330,7 @@ export class InvalidProfileError extends UnprocessableEntityError {
   readonly code: 'input_sanitized_rejected'
   readonly meta: { // all six fields required, per spec
     reason: 'input_sanitized_rejected'; message: string; docsUrl: string
-    blocked: Array<{ line: number; text: string }>; blockedCount: number; blockedTruncated: boolean
+    blocked: Array<{ line: number; text: string; directive: string; message: string }>; blockedCount: number; blockedTruncated: boolean
   }
 }
 export class TooManyVariantsError extends UnprocessableEntityError {
@@ -393,8 +395,9 @@ scope; hand-rolled calls surface it as base `APIError`.
   safe by default. A user-supplied key passes through verbatim (server replays the original job
   on payload match with `X-Idempotent-Replay: true` (visible via `.withResponse()`) and 409s
   on mismatch). Contract, per docs: the digest **excludes `metadata`** (meant to mutate across
-  retries); keys are **scoped to API key + endpoint**; keys have **no TTL**. GETs and cancel
-  carry no key (repeat cancels are naturally idempotent).
+  retries); keys are **scoped to API key + endpoint**; keys have **no TTL**. GETs, cancel, and
+  `profiles.check` carry no key (repeat cancels are naturally idempotent; a check has no side
+  effects).
 
 ## 7. `createAndWait` semantics
 
@@ -545,6 +548,20 @@ Prerequisites (upstream): `kind` is now enumerated in the spec (§8.14, shipped 
 excluded (as in §9): downloading/parsing the report bytes and the versioned v2/v3 report schema.
 
 ## CHANGELOG
+
+rev 2.15 → rev 2.16 (spec 1.26.0):
+
+- Add `client.profiles.check({ profile: { text }, credentials? }, options?)` for the new
+  `POST /v1/simc/profiles/check`: checks profile text against the rules `jobs.create` applies,
+  without creating a job or using credits. Resolves with the input `warnings` and
+  `warningsCount`; a rejection throws the same `InvalidProfileError` / `TooManyVariantsError` a
+  submission would. Adds the `Profiles` resource and `ProfileCheckParams` /
+  `ProfileCheckResponse`. Sends no idempotency key, since a repeat check has no side effects.
+- `InvalidProfileError.meta.blocked[]` entries gain `directive` (the directive the line matched,
+  or `bare_input_token`) and `message`.
+- Re-vendor (additive): the create response gains `warningsCount`, and `warnings` now lists the
+  first 16. The profile limit rises to 5 MB and the request body limit to 6 MB. All flow through
+  the generated types.
 
 rev 2.14 → rev 2.15 (spec 1.24.1):
 

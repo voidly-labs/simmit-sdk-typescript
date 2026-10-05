@@ -8,6 +8,7 @@ import {
 import { Artifacts } from './resources/artifacts'
 import { Credits } from './resources/credits'
 import { Jobs } from './resources/jobs'
+import { Profiles } from './resources/profiles'
 import { Usage } from './resources/usage'
 
 export interface ClientOptions {
@@ -48,6 +49,7 @@ export default class Simmit {
   readonly credits: Credits
   readonly artifacts: Artifacts
   readonly usage: Usage
+  readonly profiles: Profiles
 
   readonly baseURL: string
 
@@ -80,6 +82,7 @@ export default class Simmit {
     this.credits = new Credits(this)
     this.artifacts = new Artifacts(this)
     this.usage = new Usage(this)
+    this.profiles = new Profiles(this)
   }
 
   /** @internal Resource classes route through here; not public surface. */

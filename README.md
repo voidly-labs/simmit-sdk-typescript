@@ -31,7 +31,7 @@ const client = new Simmit({
 // Submit a SimC profile, wait for the sim to finish, and read the result.
 const job = await client.jobs.createAndWait({
   build: { channel: 'latest' },
-  profile: { text: profileText } // a SimC profile, up to 2 MB
+  profile: { text: profileText } // a SimC profile, up to 5 MB
 })
 
 const result = await client.jobs.getResult(job.id)
@@ -74,6 +74,19 @@ if (status.status === 'completed') {
 }
 
 await client.jobs.cancel(id) // request cancellation
+```
+
+### Check a profile before submitting
+
+`profiles.check` runs profile text through the checks `jobs.create` applies,
+without creating a job or using credits. A rejection throws the same
+`InvalidProfileError` or `TooManyVariantsError` a submission would, and a
+passing profile returns any input warnings:
+
+```ts
+const { warnings } = await client.profiles.check({
+  profile: { text: profileText }
+})
 ```
 
 ### Artifact download URLs
