@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.15.0...v0.16.0) (2026-10-05)
+
+
+### Features
+
+* add profiles.check (spec 1.26.0) ([#82](https://github.com/voidly-labs/simmit-sdk-typescript/issues/82)) ([a7a0b0d](https://github.com/voidly-labs/simmit-sdk-typescript/commit/a7a0b0d10b1c9d3feb3ea78a5a425df72dd2b46d))
+
 ## [0.15.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.14.0...v0.15.0) (2026-09-28)
 
 
