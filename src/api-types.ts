@@ -43,6 +43,12 @@ export type JobProfileResponse = Ok<paths['/v1/simc/jobs/{id}/profile']['get']>
 
 export type JobCancelResponse = Ok<paths['/v1/simc/jobs/{id}/cancel']['post']>
 
+export type ProfileCheckParams = NonNullable<
+  paths['/v1/simc/profiles/check']['post']['requestBody']
+>['content']['application/json']
+
+export type ProfileCheckResponse = Ok<paths['/v1/simc/profiles/check']['post']>
+
 export type CreditBalance = Ok<paths['/v1/simc/credits']['get']>
 
 export type CreditGrant = CreditBalance['grants'][number]

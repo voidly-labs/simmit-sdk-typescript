@@ -183,6 +183,20 @@ describe('resource → _request wiring', () => {
     expect(out).toBe(sentinel)
   })
 
+  it('profiles.check → POST /v1/simc/profiles/check with body and no idempotency flag', () => {
+    const client = makeClient()
+    const { spy, sentinel } = spyRequest(client)
+    const body = { profile: { text: '# a tiny profile' } }
+
+    const out = client.profiles.check(body)
+
+    expect(spy).toHaveBeenCalledWith(
+      { method: 'POST', path: '/v1/simc/profiles/check', body },
+      undefined
+    )
+    expect(out).toBe(sentinel)
+  })
+
   it('encodes the job id into the path', () => {
     const client = makeClient()
     const { spy } = spyRequest(client)
@@ -290,6 +304,41 @@ describe('usage.get (end to end)', () => {
     const [url, init] = fetchMock.mock.calls[0]!
     expect(url).toBe('https://api.simmit.com/v1/simc/usage')
     expect(init.method).toBe('GET')
+  })
+})
+
+describe('profiles.check (end to end)', () => {
+  it('returns input warnings and sends no idempotency key', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          warnings: [
+            {
+              kind: 'iterations_clamped',
+              line: 2,
+              requested: 1_000_000,
+              applied: 100_000,
+              message: 'iterations=1000000 is above the platform cap'
+            }
+          ],
+          warningsCount: 1
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      )
+    )
+    const client = new Simmit({ secretKey: 'smt_sk_test', fetch: fetchMock })
+    const body = { profile: { text: 'iterations=1000000' } }
+
+    const check = await client.profiles.check(body)
+
+    expect(check.warnings?.[0]?.kind).toBe('iterations_clamped')
+    expect(check.warningsCount).toBe(1)
+    const [url, init] = fetchMock.mock.calls[0]!
+    expect(url).toBe('https://api.simmit.com/v1/simc/profiles/check')
+    expect(init.method).toBe('POST')
+    expect(JSON.parse(init.body)).toEqual(body)
+    expect(init.headers['idempotency-key']).toBeUndefined()
   })
 })
 
