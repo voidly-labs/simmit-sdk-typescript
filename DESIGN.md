@@ -1,4 +1,4 @@
-# Simmit TypeScript SDK: v1 Design (revision 2.16)
+# Simmit TypeScript SDK: v1 Design (revision 2.17)
 
 Scope: public surface and foundations only, a design proposal, not an implementation.
 Convention reference: `anthropic-sdk-typescript`; where this doc is silent, that SDK's idiom is
@@ -124,7 +124,7 @@ compose: first to fire aborts (timeout → `APIConnectionTimeoutError`, retryabl
 
 `api.md`-style listing. Types: `Job` · `JobCreateParams` · `JobCreateResponse` · `JobListParams` · `JobListResponse` · `JobSummary` · `JobStatus` ·
 `TerminalJobStatus` · `JobErrorCode` · `CompletedJob` · `JobResult` · `JobStatusResponse` · `JobProfileResponse` · `JobCancelResponse` ·
-`CreditBalance` · `CreditGrant` · `UsageResponse` · `UsagePeriod` · `UsageSnapshot` · `UsagePlan` · `UsageLimits` · `ProfileCheckParams` · `ProfileCheckResponse` · `ArtifactUrl` · `Artifact` · `ArtifactKind` · `ArtifactMimeType` · `WebhookEvent`
+`JobWorkload` · `CreditBalance` · `CreditGrant` · `UsageResponse` · `UsagePeriod` · `UsageSnapshot` · `UsagePlan` · `UsageLimits` · `ProfileCheckParams` · `ProfileCheckResponse` · `ArtifactUrl` · `Artifact` · `ArtifactKind` · `ArtifactMimeType` · `WebhookEvent`
 
 - <code title="post /v1/simc/jobs">client.jobs.create({ ...params }, options?) -> JobCreateResponse</code>
 - <code title="get /v1/simc/jobs">client.jobs.list({ limit?, cursor? }, options?) -> JobListResponse</code>
@@ -213,6 +213,7 @@ unknown keys reject: accurate generated types are load-bearing, not decorative):
   profile: { text: string }                      // ≤ 5 MB UTF-8
   runtime?: { multiStage?: boolean; maxCredits?: number; maxRuntimeSeconds?: number /* deprecated → maxCredits */; maxQueueSeconds?: number }
   priority?: 'background' | 'standard' | 'high'  // enum + prose agree as of 1.14.0
+  workload?: 'interactive' | 'batch'             // default interactive; plans list what they accept in usage.plan.workloads
   metadata?: Record<string, string>              // echoed back; excluded from idempotency digest (§6)
   credentials?: { bnetClientId: string; bnetClientSecret: string }
   webhook?: { events: ['job.terminal'] }
@@ -284,6 +285,7 @@ SimmitError extends Error
 │   │   ├── TooManyVariantsError           422 · code: 'too_many_variants' (input over variant cap)
 │   │   ├── BuildPinNotAllowedError        422 · code: 'build_pin_not_allowed' (plan lacks build pinning)
 │   │   ├── BuildPinUnavailableError       422 · code: 'build_pin_unavailable' (pinned build unusable)
+│   │   ├── WorkloadNotAllowedError        422 · code: 'workload_not_allowed' (plan lacks the workload)
 │   │   └── ResultUnavailableError         422 · code: 'result_unavailable' (terminal, no result)
 │   ├── RateLimitError                     429 · code: 'rate_limit_exceeded' · meta: { scope: 'developer' }
 │   │   └── MaxActiveJobsError             429 · code: 'max_active_jobs_exceeded'
@@ -344,6 +346,10 @@ export class BuildPinNotAllowedError extends UnprocessableEntityError {
 export class BuildPinUnavailableError extends UnprocessableEntityError {
   readonly code: 'build_pin_unavailable'
   readonly meta: { reason: 'build_pin_unavailable'; message: string; docsUrl: string; buildId?: string; maxPinAgeDays?: number }
+}
+export class WorkloadNotAllowedError extends UnprocessableEntityError {
+  readonly code: 'workload_not_allowed'
+  readonly meta: { reason: 'workload_not_allowed'; message: string; docsUrl: string; workload?: JobWorkload; allowedWorkloads?: JobWorkload[] }
 }
 
 // The remaining single-code subclasses follow the same pattern; their exact metas:
@@ -548,6 +554,17 @@ Prerequisites (upstream): `kind` is now enumerated in the spec (§8.14, shipped 
 excluded (as in §9): downloading/parsing the report bytes and the versioned v2/v3 report schema.
 
 ## CHANGELOG
+
+rev 2.16 → rev 2.17 (spec 1.28.0):
+
+- Job create accepts `workload: 'interactive' | 'batch'` (default `interactive`). Batch is bulk
+  work that may queue and drain over hours without delaying interactive jobs; only the workloads
+  a plan lists are accepted. `usage.plan.workloads` lists them, default first. Adds `JobWorkload`.
+- Map the job-submit 422 code `workload_not_allowed` to `WorkloadNotAllowedError`; `meta` carries
+  the rejected `workload` and the plan's `allowedWorkloads`.
+- `usage.plan.pool` is deprecated upstream: it no longer distinguishes plans. The field and its
+  type stay as they are.
+- Folds in the 1.27.1 description rewording of the blocked-directive entry.
 
 rev 2.15 → rev 2.16 (spec 1.26.0):
 

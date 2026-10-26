@@ -519,6 +519,12 @@ export interface operations {
                      */
                     priority?: "background" | "standard" | "high";
                     /**
+                     * @description What kind of work this is, so the scheduler can treat it accordingly. `interactive` (the default) starts as soon as capacity allows and suits sims a person is waiting on. `batch` is bulk work that may queue and drain over hours; it never delays interactive jobs, and you should set `runtime.maxQueueSeconds` to cover the wait. Only workloads listed in `plan.workloads` on `GET /v1/simc/usage` are accepted; most plans accept `interactive` only.
+                     * @default interactive
+                     * @enum {string}
+                     */
+                    workload?: "interactive" | "batch";
+                    /**
                      * @description Opaque metadata echoed back unchanged for your own correlation or labels (for example `profileSource`, `characterRef`). Not used for scheduling or sim execution.
                      * @example {
                      *       "requestId": "req_12345",
@@ -778,7 +784,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Your input was rejected. `code` is `input_sanitized_rejected` when your profile contains directives Simmit does not allow, `too_many_variants` when it expands past your account variant limit, `build_pin_not_allowed` when your plan does not include build pinning, or `build_pin_unavailable` when the pinned `build.id` cannot be used. `meta.message` explains the rejection. */
+            /** @description Your input was rejected. `code` is `input_sanitized_rejected` when your profile contains directives Simmit does not allow, `too_many_variants` when it expands past your account variant limit, `build_pin_not_allowed` when your plan does not include build pinning, `build_pin_unavailable` when the pinned `build.id` cannot be used, or `workload_not_allowed` when your plan does not include the requested `workload`. `meta.message` explains the rejection. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -787,10 +793,10 @@ export interface operations {
                     "application/json": {
                         error: string;
                         /** @enum {string} */
-                        code: "input_sanitized_rejected" | "too_many_variants" | "build_pin_not_allowed" | "build_pin_unavailable";
+                        code: "input_sanitized_rejected" | "too_many_variants" | "build_pin_not_allowed" | "build_pin_unavailable" | "workload_not_allowed";
                         meta: {
                             /** @enum {string} */
-                            reason: "input_sanitized_rejected" | "too_many_variants" | "build_pin_not_allowed" | "build_pin_unavailable";
+                            reason: "input_sanitized_rejected" | "too_many_variants" | "build_pin_not_allowed" | "build_pin_unavailable" | "workload_not_allowed";
                             /** @description Human-readable explanation of why the input was rejected. */
                             message: string;
                             /**
@@ -802,7 +808,7 @@ export interface operations {
                             blocked: {
                                 line: number;
                                 text: string;
-                                /** @description The directive the line matched, such as `output` or `save_*`, or `bare_input_token` for a line without `=`. */
+                                /** @description The directive the line matched, such as `output` or `save_*`, or `bare_input_token` for a word without `=`. */
                                 directive: string;
                                 /** @description Human-readable explanation paired with `directive`. */
                                 message: string;
@@ -827,6 +833,13 @@ export interface operations {
                             buildId?: string;
                             /** @description Maximum age of a pinnable build, in days. */
                             maxPinAgeDays?: number;
+                            /**
+                             * @description The rejected `workload`.
+                             * @enum {string}
+                             */
+                            workload?: "interactive" | "batch";
+                            /** @description Workloads your account accepts, default first. */
+                            allowedWorkloads?: ("interactive" | "batch")[];
                         };
                         /**
                          * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
@@ -1105,7 +1118,7 @@ export interface operations {
                             blocked?: {
                                 line: number;
                                 text: string;
-                                /** @description The directive the line matched, such as `output` or `save_*`, or `bare_input_token` for a line without `=`. */
+                                /** @description The directive the line matched, such as `output` or `save_*`, or `bare_input_token` for a word without `=`. */
                                 directive: string;
                                 /** @description Human-readable explanation paired with `directive`. */
                                 message: string;
@@ -2387,7 +2400,7 @@ export interface operations {
                             /** @description Number of jobs currently running or starting. */
                             runningJobs: number | null;
                         };
-                        /** @description The terms your account runs under: metering rate, runtime and queue ceilings, concurrency and variant caps, compute pool, and priority fees. */
+                        /** @description The terms your account runs under: metering rate, runtime and queue ceilings, concurrency and variant caps, and priority fees. */
                         plan: {
                             /** @description Maximum jobs your account can have in flight. */
                             maxActiveJobs: number | null;
@@ -2416,10 +2429,13 @@ export interface operations {
                             /** @description Maximum simc variants (profilesets, copies, sets) allowed per job. Null means no cap. */
                             maxSimcVariants: number | null;
                             /**
-                             * @description Compute pool your jobs run on. `standard` runs on on-demand capacity, so a job may wait for a machine to boot. `warm` keeps an always-on floor of capacity. `dedicated` is capacity reserved for your account on a custom plan.
+                             * @deprecated
+                             * @description Deprecated: the compute pool no longer distinguishes plans, so don't branch on it.
                              * @enum {string}
                              */
                             pool: "standard" | "warm" | "dedicated";
+                            /** @description Workloads a job may request with `workload` on `POST /v1/simc/jobs`, default first. Most plans list `interactive` only. */
+                            workloads: ("interactive" | "batch")[];
                             /** @description Per-job priority fee in credits, by priority. Added to the base compute cost for jobs submitted at `high` only when it would buy a faster start. */
                             priorityFeeCredits: {
                                 high?: number;
@@ -2457,10 +2473,13 @@ export interface operations {
                             /** @description Maximum simc variants (profilesets, copies, sets) allowed per job. Null means no cap. */
                             maxSimcVariants: number | null;
                             /**
-                             * @description Compute pool your jobs run on. `standard` runs on on-demand capacity, so a job may wait for a machine to boot. `warm` keeps an always-on floor of capacity. `dedicated` is capacity reserved for your account on a custom plan.
+                             * @deprecated
+                             * @description Deprecated: the compute pool no longer distinguishes plans, so don't branch on it.
                              * @enum {string}
                              */
                             pool: "standard" | "warm" | "dedicated";
+                            /** @description Workloads a job may request with `workload` on `POST /v1/simc/jobs`, default first. Most plans list `interactive` only. */
+                            workloads: ("interactive" | "batch")[];
                             /** @description Per-job priority fee in credits, by priority. Added to the base compute cost for jobs submitted at `high` only when it would buy a faster start. */
                             priorityFeeCredits: {
                                 high?: number;

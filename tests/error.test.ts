@@ -9,6 +9,7 @@ import {
   BuildPinNotAllowedError,
   BuildPinUnavailableError,
   ConflictError,
+  WorkloadNotAllowedError,
   IdempotencyKeyReuseError,
   InsufficientCreditsError,
   InsufficientCreditsLiabilityError,
@@ -106,6 +107,12 @@ describe('code subclass selection', () => {
       BuildPinUnavailableError,
       UnprocessableEntityError
     ],
+    [
+      422,
+      'workload_not_allowed',
+      WorkloadNotAllowedError,
+      UnprocessableEntityError
+    ],
     [429, 'max_active_jobs_exceeded', MaxActiveJobsError, RateLimitError],
     [429, 'rate_limit_exceeded', RateLimitError, APIError]
   ] as const)('%i %s', (status, code, cls, parent) => {
@@ -197,6 +204,21 @@ describe('typed meta', () => {
       '22222222-2222-2222-2222-222222222222'
     )
     expect(unavailable.meta.maxPinAgeDays).toBe(30)
+  })
+
+  it('surfaces the rejected and allowed workloads on WorkloadNotAllowedError', () => {
+    const err = generate(
+      422,
+      envelope('workload_not_allowed', {
+        reason: 'workload_not_allowed',
+        message: 'Your plan does not include the batch workload.',
+        docsUrl: 'https://docs.simmit.com/workloads',
+        workload: 'batch',
+        allowedWorkloads: ['interactive']
+      })
+    ) as WorkloadNotAllowedError
+    expect(err.meta.workload).toBe('batch')
+    expect(err.meta.allowedWorkloads).toEqual(['interactive'])
   })
 
   it('preserves null meta and exposes the raw body via .error', () => {
