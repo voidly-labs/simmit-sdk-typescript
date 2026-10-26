@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.16.0...v0.17.0) (2026-10-26)
+
+
+### Features
+
+* adopt spec 1.28.0 (job workload, WorkloadNotAllowedError) ([#84](https://github.com/voidly-labs/simmit-sdk-typescript/issues/84)) ([8fd6155](https://github.com/voidly-labs/simmit-sdk-typescript/commit/8fd6155f5663ac97445e4d6634e303c19ceaffeb))
+
 ## [0.16.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.15.0...v0.16.0) (2026-10-05)
 
 
