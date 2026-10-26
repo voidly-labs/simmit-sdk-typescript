@@ -1,4 +1,4 @@
-import type { Job, JobStatus } from './api-types'
+import type { Job, JobStatus, JobWorkload } from './api-types'
 
 export class SimmitError extends Error {}
 
@@ -162,6 +162,9 @@ export class APIError<
       if (code === 'build_pin_unavailable') {
         return new BuildPinUnavailableError(422, body, message, headers)
       }
+      if (code === 'workload_not_allowed') {
+        return new WorkloadNotAllowedError(422, body, message, headers)
+      }
       if (code === 'result_unavailable') {
         return new ResultUnavailableError(422, body, message, headers)
       }
@@ -313,6 +316,20 @@ export class BuildPinUnavailableError extends UnprocessableEntityError {
     buildId?: string
     /** Maximum age of a pinnable build, in days. */
     maxPinAgeDays?: number
+  }
+}
+
+export class WorkloadNotAllowedError extends UnprocessableEntityError {
+  declare readonly code: 'workload_not_allowed'
+  declare readonly meta: {
+    reason: 'workload_not_allowed'
+    message: string
+    /** Not sent for this code today, though the spec lists it as required. */
+    docsUrl?: string
+    /** The rejected workload. */
+    workload?: JobWorkload
+    /** Workloads the account accepts, default first. */
+    allowedWorkloads?: JobWorkload[]
   }
 }
 

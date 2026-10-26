@@ -16,6 +16,9 @@ export type JobCreateParams = NonNullable<
 
 export type JobCreateResponse = Ok<paths['/v1/simc/jobs']['post']>
 
+/** What kind of work a job is: `interactive` (default) or `batch`. Plans list what they accept in `UsagePlan.workloads`. */
+export type JobWorkload = NonNullable<JobCreateParams['workload']>
+
 export type JobListParams = NonNullable<
   paths['/v1/simc/jobs']['get']['parameters']['query']
 >
@@ -60,7 +63,7 @@ export type UsagePeriod = UsageResponse['period']
 
 export type UsageSnapshot = UsageResponse['snapshot']
 
-/** The account's plan terms: metering rate, ceilings, concurrency, compute pool, and priority fees. */
+/** The account's plan terms: metering rate, ceilings, concurrency, accepted workloads, and priority fees. */
 export type UsagePlan = UsageResponse['plan']
 
 /** @deprecated Alias of {@link UsagePlan} with identical contents; the API serves both. Prefer `usage.plan`. */
