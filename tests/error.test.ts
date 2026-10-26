@@ -212,7 +212,6 @@ describe('typed meta', () => {
       envelope('workload_not_allowed', {
         reason: 'workload_not_allowed',
         message: 'Your plan does not include the batch workload.',
-        docsUrl: 'https://docs.simmit.com/workloads',
         workload: 'batch',
         allowedWorkloads: ['interactive']
       })

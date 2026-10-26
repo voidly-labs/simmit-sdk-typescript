@@ -349,7 +349,7 @@ export class BuildPinUnavailableError extends UnprocessableEntityError {
 }
 export class WorkloadNotAllowedError extends UnprocessableEntityError {
   readonly code: 'workload_not_allowed'
-  readonly meta: { reason: 'workload_not_allowed'; message: string; docsUrl: string; workload?: JobWorkload; allowedWorkloads?: JobWorkload[] }
+  readonly meta: { reason: 'workload_not_allowed'; message: string; docsUrl?: string; workload?: JobWorkload; allowedWorkloads?: JobWorkload[] }
 }
 
 // The remaining single-code subclasses follow the same pattern; their exact metas:
@@ -374,7 +374,9 @@ export class ServiceUnavailableError extends InternalServerError {
 Ground-truth overrides: `InvalidProfileError.meta` fields all **required** (rev 1 had three
 optional); `TooManyVariantsError.meta` narrows the shared 422 meta (spec marks `totalVariants`/
 `maxVariants`/`upgradeUrl` optional so the object fits both codes) to required for this code; both
-402 metas **nullable** (spec: `object | null`); `priorityFeeCredits` docs-sourced (§8.11).
+402 metas **nullable** (spec: `object | null`); `priorityFeeCredits` docs-sourced (§8.11);
+`WorkloadNotAllowedError.meta.docsUrl` **optional** (the spec's shared 422 meta requires it, but the
+live rejection omits it; the SDK ships against the wire).
 
 Mapping rule in `APIError.generate`: status selects the base class; an enumerated `code` with
 structured `meta` selects the subclass; anything unrecognized falls back to the status class, so

@@ -324,7 +324,8 @@ export class WorkloadNotAllowedError extends UnprocessableEntityError {
   declare readonly meta: {
     reason: 'workload_not_allowed'
     message: string
-    docsUrl: string
+    /** Not sent for this code today, though the spec lists it as required. */
+    docsUrl?: string
     /** The rejected workload. */
     workload?: JobWorkload
     /** Workloads the account accepts, default first. */
