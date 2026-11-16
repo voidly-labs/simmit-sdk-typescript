@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.18.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.17.0...v0.18.0) (2026-11-16)
+
+
+### Features
+
+* add simcForever resources for the SimC Forever endpoints ([#87](https://github.com/voidly-labs/simmit-sdk-typescript/issues/87)) ([2ebf7a4](https://github.com/voidly-labs/simmit-sdk-typescript/commit/2ebf7a4a0a7ce678d75cc1249676fb17c98475a0))
+* adopt spec 1.34.6 (economy workload, daily budget, iterations cap) ([#86](https://github.com/voidly-labs/simmit-sdk-typescript/issues/86)) ([5c297bf](https://github.com/voidly-labs/simmit-sdk-typescript/commit/5c297bff39967183f834f8e4c77d8ae124564f05))
+
 ## [0.17.0](https://github.com/voidly-labs/simmit-sdk-typescript/compare/v0.16.0...v0.17.0) (2026-10-26)
 
 
