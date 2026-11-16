@@ -9,6 +9,7 @@ import { Artifacts } from './resources/artifacts'
 import { Credits } from './resources/credits'
 import { Jobs } from './resources/jobs'
 import { Profiles } from './resources/profiles'
+import { SimcForever } from './resources/simc-forever/simc-forever'
 import { Usage } from './resources/usage'
 
 export interface ClientOptions {
@@ -50,6 +51,8 @@ export default class Simmit {
   readonly artifacts: Artifacts
   readonly usage: Usage
   readonly profiles: Profiles
+  /** SimC Forever jobs, profile checks and artifacts. Still in early development: may change in a minor release. */
+  readonly simcForever: SimcForever
 
   readonly baseURL: string
 
@@ -83,6 +86,7 @@ export default class Simmit {
     this.artifacts = new Artifacts(this)
     this.usage = new Usage(this)
     this.profiles = new Profiles(this)
+    this.simcForever = new SimcForever(this)
   }
 
   /** @internal Resource classes route through here; not public surface. */

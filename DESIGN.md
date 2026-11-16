@@ -1,4 +1,4 @@
-# Simmit TypeScript SDK: v1 Design (revision 2.18)
+# Simmit TypeScript SDK: v1 Design (revision 2.19)
 
 Scope: public surface and foundations only, a design proposal, not an implementation.
 Convention reference: `anthropic-sdk-typescript`; where this doc is silent, that SDK's idiom is
@@ -26,7 +26,7 @@ simmit-sdk/
     ├── error.ts                  # full error hierarchy (§5)
     ├── webhook.ts                # standalone unwrapWebhook (§4); WebCrypto only
     ├── api-types.ts              # handwritten public aliases over generated types (the seam)
-    ├── resources/                # jobs.ts, credits.ts
+    ├── resources/                # jobs.ts, credits.ts, ...; simc-forever/ holds the SimC Forever namespace
     ├── internal/                 # not exported: request layer, retry/backoff, idempotency, polling
     └── generated/
         └── openapi.d.ts          # openapi-typescript output. Tool-owned. Never hand-edited.
@@ -69,6 +69,7 @@ export default class Simmit {
   readonly artifacts: Artifacts
   readonly usage: Usage
   readonly profiles: Profiles
+  readonly simcForever: SimcForever // early development, see §4
   constructor(options?: ClientOptions)
 }
 
@@ -138,6 +139,31 @@ compose: first to fire aborts (timeout → `APIConnectionTimeoutError`, retryabl
 - <code title="get /v1/simc/artifacts/{id}/url">client.artifacts.getUrl(artifactId, options?) -> ArtifactUrl</code>
 - <code title="get /v1/simc/usage">client.usage.get(options?) -> UsageResponse</code>
 - <code title="post /v1/simc/profiles/check">client.profiles.check({ ...params }, options?) -> ProfileCheckResponse</code>
+
+**SimC Forever (early development).** `client.simcForever` mirrors the job, profile-check and
+artifact endpoints under `/v1/simc-forever/*`. Upstream marks the edition as still in early
+development, so this namespace may change in a minor release, and its types are spec-derived only:
+they have not been checked against a completed live job. Types carry a `SimcForever` prefix
+(`SimcForeverJob`, `SimcForeverJobCreateParams`, `SimcForeverJobCreateResponse`,
+`SimcForeverJobListParams`, `SimcForeverJobListResponse`, `SimcForeverJobSummary`,
+`SimcForeverJobResult`, `SimcForeverJobStatusResponse`, `SimcForeverJobProfileResponse`,
+`SimcForeverJobCancelResponse`, `SimcForeverProfileCheckParams`,
+`SimcForeverProfileCheckResponse`, `SimcForeverArtifactUrl`) and are derived from the Forever
+paths rather than aliased to the SimC ones, because the records differ: no `links.share`, no
+`credentials`, no seconds-denominated runtime fields (`runtime.maxRuntimeSeconds`,
+`runtime.ceiling.runtimeSeconds`), and `build.gitBranch` is `'main'`. Statuses, error codes, the
+idempotency contract and the `include` option are shared, so `isTerminal`, the error classes and
+`JobStatusOptions` apply unchanged.
+
+- <code title="post /v1/simc-forever/jobs">client.simcForever.jobs.create({ ...params }, options?) -> SimcForeverJobCreateResponse</code>
+- <code title="get /v1/simc-forever/jobs">client.simcForever.jobs.list({ limit?, cursor? }, options?) -> SimcForeverJobListResponse</code>
+- <code title="get /v1/simc-forever/jobs/{id}">client.simcForever.jobs.get(jobId, options?) -> SimcForeverJob</code>
+- <code title="get /v1/simc-forever/jobs/{id}/status">client.simcForever.jobs.getStatus(jobId, options?) -> SimcForeverJobStatusResponse</code>
+- <code title="get /v1/simc-forever/jobs/{id}/result">client.simcForever.jobs.getResult(jobId, options?) -> SimcForeverJobResult</code>
+- <code title="get /v1/simc-forever/jobs/{id}/profile">client.simcForever.jobs.getProfile(jobId, options?) -> SimcForeverJobProfileResponse</code>
+- <code title="post /v1/simc-forever/jobs/{id}/cancel">client.simcForever.jobs.cancel(jobId, options?) -> SimcForeverJobCancelResponse</code>
+- <code title="post /v1/simc-forever/profiles/check">client.simcForever.profiles.check({ ...params }, options?) -> SimcForeverProfileCheckResponse</code>
+- <code title="get /v1/simc-forever/artifacts/{id}/url">client.simcForever.artifacts.getUrl(artifactId, options?) -> SimcForeverArtifactUrl</code>
 
 Standalone status helpers (pure, no client; for the decoupled and webhook flows where consumers branch on a job's state):
 
@@ -505,6 +531,10 @@ now; §1 assumes the scope is ours.
 - **Builds endpoints:** read-mostly metadata, additive later. Named gap: the docs'
   bundled-profiles best practice depends on excluded `GET /v1/simc/builds`. Hand-rolled until v1.x.
   (`GET /v1/simc/usage` was promoted into v1 as `usage.get()` for the concurrency/limits surface, §4.)
+- **`simcForever.jobs.createAndWait`:** the Forever create response has no seconds-denominated
+  runtime ceiling to derive a wait deadline from (§7), and the job-error classes carry a SimC
+  `Job`. Poll `simcForever.jobs.getStatus` with `isTerminal` until the edition settles. The
+  Forever builds endpoints are excluded for the same reason as the SimC ones.
 - **Plain-text submission** (`text/plain`): the SDK is JSON-only. The generated-types seam
   cannot see the docs-only contract (§8.10). Migration map: raw body → `profile.text`; query
   params (`channel`, `multiStage`, …) → envelope fields; `X-Bnet-*` headers → `credentials`.
@@ -562,6 +592,14 @@ Prerequisites (upstream): `kind` is now enumerated in the spec (§8.14, shipped 
 excluded (as in §9): downloading/parsing the report bytes and the versioned v2/v3 report schema.
 
 ## CHANGELOG
+
+rev 2.18 → rev 2.19 (SimC Forever):
+
+- Add `client.simcForever`, a namespace over the `/v1/simc-forever/*` endpoints: `jobs.create` /
+  `list` / `get` / `getStatus` / `getResult` / `getProfile` / `cancel`, `profiles.check` and
+  `artifacts.getUrl`, each a thin wrapper matching its SimC counterpart. Adds the `SimcForever*`
+  types (§4). Upstream marks the edition as still in early development, so the namespace may
+  change in a minor release. `createAndWait` and the builds endpoints are not included (§9).
 
 rev 2.17 → rev 2.18 (spec 1.34.6):
 

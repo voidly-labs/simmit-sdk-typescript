@@ -16,6 +16,10 @@ export type { Credits } from './resources/credits'
 export type { Artifacts } from './resources/artifacts'
 export type { Usage } from './resources/usage'
 export type { Profiles } from './resources/profiles'
+export type { SimcForever } from './resources/simc-forever/simc-forever'
+export type { SimcForeverJobs } from './resources/simc-forever/jobs'
+export type { SimcForeverProfiles } from './resources/simc-forever/profiles'
+export type { SimcForeverArtifacts } from './resources/simc-forever/artifacts'
 // Standalone webhook verification: no client (and no secret key) required.
 // WebhookEvent is exported from api-types, derived from the spec schema.
 export { unwrapWebhook } from './webhook'
