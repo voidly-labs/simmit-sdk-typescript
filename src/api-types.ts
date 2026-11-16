@@ -79,5 +79,58 @@ export type ArtifactKind = Artifact['kind']
 
 export type ArtifactMimeType = Artifact['mimeType']
 
+// SimC Forever mirrors the SimC job surface under its own paths. Its records
+// have no `links.share` and no seconds-denominated runtime fields, so they are
+// derived separately rather than aliased to the SimC types.
+
+export type SimcForeverJobCreateParams = NonNullable<
+  paths['/v1/simc-forever/jobs']['post']['requestBody']
+>['content']['application/json']
+
+export type SimcForeverJobCreateResponse = Ok<
+  paths['/v1/simc-forever/jobs']['post']
+>
+
+export type SimcForeverJobListParams = NonNullable<
+  paths['/v1/simc-forever/jobs']['get']['parameters']['query']
+>
+
+export type SimcForeverJobListResponse = Ok<
+  paths['/v1/simc-forever/jobs']['get']
+>
+
+/** A single job in a `simcForever.jobs.list()` page. */
+export type SimcForeverJobSummary = SimcForeverJobListResponse['jobs'][number]
+
+export type SimcForeverJob = Ok<paths['/v1/simc-forever/jobs/{id}']['get']>
+
+export type SimcForeverJobResult = Ok<
+  paths['/v1/simc-forever/jobs/{id}/result']['get']
+>
+
+export type SimcForeverJobStatusResponse = Ok<
+  paths['/v1/simc-forever/jobs/{id}/status']['get']
+>
+
+export type SimcForeverJobProfileResponse = Ok<
+  paths['/v1/simc-forever/jobs/{id}/profile']['get']
+>
+
+export type SimcForeverJobCancelResponse = Ok<
+  paths['/v1/simc-forever/jobs/{id}/cancel']['post']
+>
+
+export type SimcForeverProfileCheckParams = NonNullable<
+  paths['/v1/simc-forever/profiles/check']['post']['requestBody']
+>['content']['application/json']
+
+export type SimcForeverProfileCheckResponse = Ok<
+  paths['/v1/simc-forever/profiles/check']['post']
+>
+
+export type SimcForeverArtifactUrl = Ok<
+  paths['/v1/simc-forever/artifacts/{id}/url']['get']
+>
+
 /** The `job.terminal` webhook payload, derived from the spec's schema. */
 export type WebhookEvent = components['schemas']['WebhookEvent']

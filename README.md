@@ -114,6 +114,21 @@ usage.snapshot.activeJobs // jobs in flight right now (number | null)
 usage.budget?.remainingSeconds // daily full-speed time left (budget is null without a daily budget)
 ```
 
+### SimC Forever
+
+`client.simcForever` exposes `jobs`, `profiles` and `artifacts` for the SimC
+Forever edition, with the same methods as their SimC counterparts except
+`createAndWait`. SimC Forever is still in early development, so this part of
+the SDK may change in a minor release.
+
+```ts
+const { id } = await client.simcForever.jobs.create({
+  build: { channel: 'latest' },
+  profile: { text: profileText }
+})
+const status = await client.simcForever.jobs.getStatus(id)
+```
+
 ### Errors
 
 Every API error is a typed subclass of `SimmitError`, with a narrowed `code`
