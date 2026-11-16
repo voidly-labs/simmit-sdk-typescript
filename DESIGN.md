@@ -1,4 +1,4 @@
-# Simmit TypeScript SDK: v1 Design (revision 2.17)
+# Simmit TypeScript SDK: v1 Design (revision 2.18)
 
 Scope: public surface and foundations only, a design proposal, not an implementation.
 Convention reference: `anthropic-sdk-typescript`; where this doc is silent, that SDK's idiom is
@@ -124,7 +124,7 @@ compose: first to fire aborts (timeout → `APIConnectionTimeoutError`, retryabl
 
 `api.md`-style listing. Types: `Job` · `JobCreateParams` · `JobCreateResponse` · `JobListParams` · `JobListResponse` · `JobSummary` · `JobStatus` ·
 `TerminalJobStatus` · `JobErrorCode` · `CompletedJob` · `JobResult` · `JobStatusResponse` · `JobProfileResponse` · `JobCancelResponse` ·
-`JobWorkload` · `CreditBalance` · `CreditGrant` · `UsageResponse` · `UsagePeriod` · `UsageSnapshot` · `UsagePlan` · `UsageLimits` · `ProfileCheckParams` · `ProfileCheckResponse` · `ArtifactUrl` · `Artifact` · `ArtifactKind` · `ArtifactMimeType` · `WebhookEvent`
+`JobWorkload` · `CreditBalance` · `CreditGrant` · `UsageResponse` · `UsagePeriod` · `UsageSnapshot` · `UsageBudget` · `UsagePlan` · `UsageLimits` · `ProfileCheckParams` · `ProfileCheckResponse` · `ArtifactUrl` · `Artifact` · `ArtifactKind` · `ArtifactMimeType` · `WebhookEvent`
 
 - <code title="post /v1/simc/jobs">client.jobs.create({ ...params }, options?) -> JobCreateResponse</code>
 - <code title="get /v1/simc/jobs">client.jobs.list({ limit?, cursor? }, options?) -> JobListResponse</code>
@@ -212,8 +212,8 @@ unknown keys reject: accurate generated types are load-bearing, not decorative):
   build: { channel: 'nightly' | 'weekly' | 'latest'; gitBranch?: 'midnight'; id?: string }
   profile: { text: string }                      // ≤ 5 MB UTF-8
   runtime?: { multiStage?: boolean; maxCredits?: number; maxRuntimeSeconds?: number /* deprecated → maxCredits */; maxQueueSeconds?: number }
-  priority?: 'background' | 'standard' | 'high'  // enum + prose agree as of 1.14.0
-  workload?: 'interactive' | 'batch'             // default interactive; plans list what they accept in usage.plan.workloads
+  priority?: 'background' | 'standard' | 'high'  // defaults to usage.plan.defaultPriority, capped at usage.plan.maxPriority
+  workload?: 'interactive' | 'batch' | 'economy' // default interactive; plans list what they accept in usage.plan.workloads
   metadata?: Record<string, string>              // echoed back; excluded from idempotency digest (§6)
   credentials?: { bnetClientId: string; bnetClientSecret: string }
   webhook?: { events: ['job.terminal'] }
@@ -283,6 +283,7 @@ SimmitError extends Error
 │   ├── UnprocessableEntityError           422 · code: string
 │   │   ├── InvalidProfileError            422 · code: 'input_sanitized_rejected'
 │   │   ├── TooManyVariantsError           422 · code: 'too_many_variants' (input over variant cap)
+│   │   ├── IterationsExceedsPolicyError   422 · code: 'iterations_exceeds_policy' (sim over plan.maxIterationsPerJob)
 │   │   ├── BuildPinNotAllowedError        422 · code: 'build_pin_not_allowed' (plan lacks build pinning)
 │   │   ├── BuildPinUnavailableError       422 · code: 'build_pin_unavailable' (pinned build unusable)
 │   │   ├── WorkloadNotAllowedError        422 · code: 'workload_not_allowed' (plan lacks the workload)
@@ -339,6 +340,10 @@ export class TooManyVariantsError extends UnprocessableEntityError {
   readonly code: 'too_many_variants'
   readonly meta: { reason: 'too_many_variants'; message: string; totalVariants: number; maxVariants: number; upgradeUrl: string }
 }
+export class IterationsExceedsPolicyError extends UnprocessableEntityError {
+  readonly code: 'iterations_exceeds_policy'
+  readonly meta: { reason: 'iterations_exceeds_policy'; message: string; iterations: number; variants: number; iterationsPerVariant: number; maxIterationsPerJob: number; upgradeUrl: string }
+}
 export class BuildPinNotAllowedError extends UnprocessableEntityError {
   readonly code: 'build_pin_not_allowed'
   readonly meta: { reason: 'build_pin_not_allowed'; message: string; docsUrl: string; buildId?: string }
@@ -373,7 +378,8 @@ export class ServiceUnavailableError extends InternalServerError {
 
 Ground-truth overrides: `InvalidProfileError.meta` fields all **required** (rev 1 had three
 optional); `TooManyVariantsError.meta` narrows the shared 422 meta (spec marks `totalVariants`/
-`maxVariants`/`upgradeUrl` optional so the object fits both codes) to required for this code; both
+`maxVariants`/`upgradeUrl` optional so the object fits both codes) to required for this code, and
+`IterationsExceedsPolicyError.meta` does the same for its size fields; both
 402 metas **nullable** (spec: `object | null`); `priorityFeeCredits` docs-sourced (§8.11);
 `WorkloadNotAllowedError.meta.docsUrl` **optional** (the spec's shared 422 meta requires it, but the
 live rejection omits it; the SDK ships against the wire).
@@ -556,6 +562,30 @@ Prerequisites (upstream): `kind` is now enumerated in the spec (§8.14, shipped 
 excluded (as in §9): downloading/parsing the report bytes and the versioned v2/v3 report schema.
 
 ## CHANGELOG
+
+rev 2.17 → rev 2.18 (spec 1.34.6):
+
+- `JobWorkload` gains `economy`: runs at reduced speed and uses none of the account's daily
+  full-speed time. An `interactive` job runs as `economy` once that time is used, unless credits
+  keep it at full speed.
+- Job responses (create, get, status, result) gain `workload` and `requestedWorkload`, which differ
+  when a job was moved to `economy`, and `requestedPriority` next to `priority`: the priority asked
+  for versus the one the job runs at, capped at `plan.maxPriority`. Create and status responses
+  now carry `priority` too.
+- Job `runtime` gains `variants` and `iterations` (the sim's size as checked against
+  `plan.maxIterationsPerJob`), both `number | null`.
+- Map the 422 code `iterations_exceeds_policy` (job submit and `profiles.check`) to
+  `IterationsExceedsPolicyError`; `meta` carries `iterations`, `variants`, `iterationsPerVariant`,
+  `maxIterationsPerJob` and `upgradeUrl`.
+- `usage` gains `budget` (daily full-speed time used and remaining, in seconds and credits, with
+  `resetAt`; `null` on a plan with no daily budget). `usage.plan` gains `defaultPriority`,
+  `maxPriority`, `interactiveSecondsPerDay` and `maxIterationsPerJob`. Adds `UsageBudget`.
+- `profiles.check` accepts `runtime.multiStage`, so a profile is sized and warned as the
+  submission will be. Input warnings gain the `iterations_ignored_by_multistage` kind.
+- `priority` no longer has a fixed `standard` default: it defaults to `plan.defaultPriority`.
+- Re-vendor: the spec now also describes the SimC Forever endpoints (`/v1/simc-forever/*`), which
+  are still in early development upstream. They flow into the generated types; no client surface
+  is added for them here.
 
 rev 2.16 → rev 2.17 (spec 1.28.0):
 

@@ -12,16 +12,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List your recent SimC jobs
-         * @description Returns your recent SimC jobs, newest first. Older jobs fall outside the retention window and are not returned.
+         * List jobs
+         * @description Returns your recent SimC jobs, newest first. Jobs past retention are not returned.
          */
         get: operations["listJobs"];
         put?: never;
         /**
-         * Submit a new SimC sim
-         * @description Submits a new SimC sim to the queue. Returns immediately with a job ID; the sim runs asynchronously. Use the ID to poll status, fetch the final result, and download any artifacts.
-         *
-         *     Submitting reserves credits from your balance: a small starting reservation that grows as the sim runs, plus any priority fee. Actual usage is reconciled on completion and unused reserved credits are refunded. See "Credits → Job budgets" in the documentation for details.
+         * Submit a sim
+         * @description Queues a SimC sim and returns its job ID. Use the ID to poll status and fetch the result.
          */
         post: operations["createJob"];
         delete?: never;
@@ -40,8 +38,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Check a SimC profile
-         * @description Checks your SimC profile text against the rules `POST /v1/simc/jobs` applies to it, without submitting a sim. Returns the same rejections and warnings a submission of that text would. A partial profile works too, such as lines you add to every sim. It doesn't create a job or use credits.
+         * Check a profile
+         * @description Checks SimC profile text against the rules `POST /v1/simc/jobs` applies, returning the same rejections and warnings. A partial profile works too. Creates no job and uses no credits.
          */
         post: operations["checkProfile"];
         delete?: never;
@@ -57,7 +55,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List available SimC builds */
+        /** List builds */
         get: operations["listBuilds"];
         put?: never;
         post?: never;
@@ -75,8 +73,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get a SimC build
-         * @description Returns a SimC build by ID, including older builds no longer current on any channel. `GET /v1/simc/builds` lists only the current build per channel. Returns `404` once the build has been removed from retention.
+         * Get a build
+         * @description Returns a SimC build by ID, including builds no longer current on a channel. `404` once the build is past retention.
          */
         get: operations["getBuild"];
         put?: never;
@@ -95,8 +93,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get a SimC job record
-         * @description Returns the full record for a SimC job, including timestamps, runtime details, metadata, and build info. For lightweight polling while a sim runs, use `GET /v1/simc/jobs/{id}/status` instead.
+         * Get a job
+         * @description Returns the full record for a SimC job. To poll a running sim, use `GET /v1/simc/jobs/{id}/status`.
          */
         get: operations["getJob"];
         put?: never;
@@ -115,8 +113,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get a SimC job result
-         * @description Returns the full result payload for a finished SimC job — summary metrics, runtime info, and artifact references. Available once the job reaches a terminal status (`completed`, `failed`, `cancelled`, or `timed_out`).
+         * Get a job’s result
+         * @description Returns the result of a finished SimC job: summary metrics and artifacts. Available once the job is terminal.
          */
         get: operations["getJobResult"];
         put?: never;
@@ -135,8 +133,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get a SimC job’s submitted profile
-         * @description Returns the SimC profile text you submitted with the job. Available at any point in the job’s lifecycle, including while the job is queued or running.
+         * Get a job’s profile
+         * @description Returns the SimC profile text you submitted with the job, including while it is queued or running.
          */
         get: operations["getJobProfile"];
         put?: never;
@@ -155,8 +153,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Poll a SimC job status
-         * @description Returns the current status, queue position, and progress for a SimC job. Designed for polling while a sim runs. Use `include` to add optional fields like `logEntries`.
+         * Get a job’s status
+         * @description Returns the status, queue position and progress of a SimC job. Built for polling. `include=logEntries` adds log lines.
          */
         get: operations["getJobStatus"];
         put?: never;
@@ -175,8 +173,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get a SimC artifact URL
-         * @description Returns a stable public URL for a SimC job artifact (HTML report, JSON report, raw log, etc.), valid for the artifact's full retention window. Use this when you need to control the final fetch URL yourself.
+         * Get an artifact URL
+         * @description Returns a public download URL for a SimC job artifact, valid for its retention window.
          */
         get: operations["getArtifactUrl"];
         put?: never;
@@ -197,8 +195,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Cancel a SimC job
-         * @description Cancels one of your SimC jobs. Jobs that have not started running end immediately. Jobs already in flight are signaled to stop; poll `GET /v1/simc/jobs/{id}/status` to observe the transition to `cancelled`. Repeat calls return the same response.
+         * Cancel a job
+         * @description Cancels a SimC job. A job that has not started ends immediately; a running job is signaled to stop, so poll `GET /v1/simc/jobs/{id}/status` until it is `cancelled`. Repeat calls return the same response.
          */
         post: operations["cancelJob"];
         delete?: never;
@@ -216,7 +214,7 @@ export interface paths {
         };
         /**
          * Get your usage summary
-         * @description Returns your usage for the current period along with a live snapshot of queued and in-flight jobs. For your credit balance, see `GET /v1/simc/credits`.
+         * @description Returns your usage for the current period, your daily full-speed time, and live job counts. For credits, see `GET /v1/simc/credits`.
          */
         get: operations["getUsage"];
         put?: never;
@@ -236,15 +234,212 @@ export interface paths {
         };
         /**
          * Get your credit balance and active grants
-         * @description Returns your credit balance, split between purchased credits and any active grants.
-         *
-         *     Consumption order: grants are spent before purchased credits, with the earliest-expiring grant spent first. Grants without an expiry are spent last.
-         *
-         *     For transaction history and lifetime totals, see the dashboard.
+         * @description Returns your purchased credits and active grants. Grants are spent before purchased credits, soonest expiry first.
          */
         get: operations["getCredits"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/simc-forever/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List jobs
+         * @description Returns your recent SimC Forever jobs, newest first. Jobs past retention are not returned.
+         */
+        get: operations["simcForeverListJobs"];
+        put?: never;
+        /**
+         * Submit a sim
+         * @description Queues a SimC Forever sim and returns its job ID. Use the ID to poll status and fetch the result.
+         */
+        post: operations["simcForeverCreateJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/simc-forever/profiles/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check a profile
+         * @description Checks SimC profile text against the rules `POST /v1/simc-forever/jobs` applies, returning the same rejections and warnings. A partial profile works too. Creates no job and uses no credits.
+         */
+        post: operations["simcForeverCheckProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/simc-forever/builds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List builds */
+        get: operations["simcForeverListBuilds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/simc-forever/builds/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a build
+         * @description Returns a SimC Forever build by ID, including builds no longer current on a channel. `404` once the build is past retention.
+         */
+        get: operations["simcForeverGetBuild"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/simc-forever/jobs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a job
+         * @description Returns the full record for a SimC Forever job. To poll a running sim, use `GET /v1/simc-forever/jobs/{id}/status`.
+         */
+        get: operations["simcForeverGetJob"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/simc-forever/jobs/{id}/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a job’s result
+         * @description Returns the result of a finished SimC Forever job: summary metrics and artifacts. Available once the job is terminal.
+         */
+        get: operations["simcForeverGetJobResult"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/simc-forever/jobs/{id}/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a job’s profile
+         * @description Returns the SimC profile text you submitted with the job, including while it is queued or running.
+         */
+        get: operations["simcForeverGetJobProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/simc-forever/jobs/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a job’s status
+         * @description Returns the status, queue position and progress of a SimC Forever job. Built for polling. `include=logEntries` adds log lines.
+         */
+        get: operations["simcForeverGetJobStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/simc-forever/artifacts/{id}/url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get an artifact URL
+         * @description Returns a public download URL for a SimC Forever job artifact, valid for its retention window.
+         */
+        get: operations["simcForeverGetArtifactUrl"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/simc-forever/jobs/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a job
+         * @description Cancels a SimC Forever job. A job that has not started ends immediately; a running job is signaled to stop, so poll `GET /v1/simc-forever/jobs/{id}/status` until it is `cancelled`. Repeat calls return the same response.
+         */
+        post: operations["simcForeverCancelJob"];
         delete?: never;
         options?: never;
         head?: never;
@@ -262,16 +457,16 @@ export interface webhooks {
         };
         get?: never;
         put?: never;
-        /** @description Sent when a subscribed job reaches a terminal state (completed, failed, cancelled, or timed_out). Configure your endpoint URL and signing secret in the dashboard, then subscribe individual jobs by including webhook.events in the POST /simc/jobs request body. Every delivery is signed — verify X-Simmit-Signature before trusting the payload. */
+        /** @description Sent when a subscribed job reaches a terminal status. Set your endpoint URL and signing secret in the dashboard, then subscribe a job with `webhook.events` when you submit it. Verify `X-Simmit-Signature` before trusting the payload. */
         post: {
             parameters: {
                 query?: never;
                 header: {
-                    /** @description HMAC-SHA256 signature for verifying authenticity. Format: `t=<unix-seconds>,v1=<hex>`. The signed message is `{t}.{rawBody}` (the timestamp, a literal dot, and the raw JSON body), keyed by your webhook signing secret. Reject deliveries whose `t` is more than 300 seconds old to mitigate replay. */
+                    /** @description HMAC-SHA256 signature, as `t=<unix-seconds>,v1=<hex>`. The signed message is `{t}.{rawBody}`, keyed by your webhook signing secret. Reject deliveries whose `t` is more than 300 seconds old. */
                     "X-Simmit-Signature": string;
-                    /** @description Unique ID for the event. Stable across retries — use it to deduplicate deliveries. */
+                    /** @description Event ID, the same across retries. Use it to deduplicate. */
                     "X-Simmit-Event-Id": string;
-                    /** @description Unique ID for this specific delivery attempt. Changes on each retry. */
+                    /** @description ID of this delivery attempt. Changes on each retry. */
                     "X-Simmit-Delivery-Id": string;
                 };
                 path?: never;
@@ -283,7 +478,7 @@ export interface webhooks {
                 };
             };
             responses: {
-                /** @description Return any 2xx status to acknowledge receipt. Non-2xx responses trigger retries. */
+                /** @description Return any 2xx to acknowledge. Anything else is retried. */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -314,7 +509,7 @@ export interface components {
             version: "v1";
             /**
              * Format: date-time
-             * @description ISO 8601 timestamp of when the event was created.
+             * @description When the event was created.
              * @example 2026-03-25T12:00:00.000Z
              */
             timestamp: string;
@@ -329,19 +524,26 @@ export interface components {
                  * @enum {string}
                  */
                 status: "completed" | "failed" | "cancelled" | "timed_out";
-                /** @description Human-readable reason string, or null. */
+                /** @description Reason string, or null. */
                 statusReason: string | null;
             };
         };
         JobLinks: {
             /**
              * Format: uri
-             * @description URL to a hosted page for this job. Shows live status while the job is queued or running, and the full report once it completes. Returns `404` after retention expires.
+             * @description Hosted page for this job: live status while it is queued or running, then the full report. Returns `404` after retention expires.
              */
             share: string;
             /**
              * Format: uri
-             * @description URL to the manifest JSON for the latest attempt. Only present once the job reaches a terminal status. Returns `404` after retention expires. May change between responses if the job is retried.
+             * @description Manifest JSON for the latest attempt. Only present once the job is terminal. Returns `404` after retention expires. Changes if the job is retried.
+             */
+            manifest?: string;
+        };
+        SimcForeverJobLinks: {
+            /**
+             * Format: uri
+             * @description Manifest JSON for the latest attempt. Only present once the job is terminal. Returns `404` after retention expires. Changes if the job is retried.
              */
             manifest?: string;
         };
@@ -357,9 +559,9 @@ export interface operations {
     listJobs: {
         parameters: {
             query?: {
-                /** @description Maximum number of jobs to return. Defaults to 25, max 100. */
+                /** @description Jobs to return. Defaults to 25, maximum 100. */
                 limit?: number;
-                /** @description Opaque pagination cursor from a previous list response (`page.nextCursor`). */
+                /** @description `page.nextCursor` from a previous response. */
                 cursor?: string;
             };
             header?: never;
@@ -371,11 +573,11 @@ export interface operations {
             /** @description Your recent SimC jobs, newest first. */
             200: {
                 headers: {
-                    /** @description Your in-flight job count at the time of this response. */
+                    /** @description Your jobs in flight. */
                     "X-Active-Jobs": string;
-                    /** @description Your account ceiling for in-flight jobs. */
+                    /** @description Your limit on jobs in flight. */
                     "X-Max-Active-Jobs": string;
-                    /** @description Correlation id for this request, present on every response. The same value is echoed in the `requestId` field of error bodies. */
+                    /** @description Request ID, also in error bodies as `requestId`. */
                     "X-Request-Id": string;
                     [name: string]: unknown;
                 };
@@ -391,11 +593,11 @@ export interface operations {
                             completedAt: string | null;
                             /** @enum {string|null} */
                             errorCode: "execution_interrupted" | "execution_timeout" | "max_credits_reached" | "credits_exhausted" | "execution_failed" | "build_unavailable" | "simulation_error" | "queue_timeout" | "input_invalid" | "insufficient_credits" | "user_cancelled" | "internal" | null;
-                            /** @description Opaque metadata echoed back exactly as submitted. Not used for scheduling or sim execution. */
+                            /** @description Your metadata, exactly as submitted. */
                             metadata: {
                                 [key: string]: unknown;
                             } | null;
-                            /** @description Build identifier. Use `GET /v1/simc/builds/{id}` for the full build record. */
+                            /** @description Build ID. `GET /v1/simc/builds/{id}` returns the build. */
                             buildId: string | null;
                             links: components["schemas"]["JobLinks"];
                         }[];
@@ -405,7 +607,7 @@ export interface operations {
                             nextCursor: string | null;
                             /**
                              * Format: date-time
-                             * @description Earliest timestamp included in this response. Jobs before this time are not returned.
+                             * @description Jobs before this time are not returned.
                              */
                             since: string;
                         };
@@ -427,14 +629,14 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
                     };
                 };
             };
-            /** @description Your API token is missing, invalid, or not authorized for this request. See `code` for the specific reason. */
+            /** @description Your API key is missing, invalid, or not allowed. See `code`. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -450,7 +652,7 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -463,7 +665,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                /** @description Optional client-supplied key (≤255 printable-ASCII chars) for safe retries. Reusing the same key with the same payload returns the original job; reusing it with a different payload returns 409. `metadata` is excluded from the payload comparison. Keys are scoped to your API key and this endpoint, and do not expire. */
+                /** @description Key (≤255 printable-ASCII chars) for safe retries. The same key with the same payload returns the original job; with a different payload, 409. `metadata` is not compared. Keys are scoped to the client your API key is attached to, and do not expire. */
                 "idempotency-key"?: string;
             };
             path?: never;
@@ -479,53 +681,52 @@ export interface operations {
                          */
                         channel: "nightly" | "weekly" | "latest";
                         /**
-                         * @description Optional SimC git branch to override the channel's default.
+                         * @description SimC git branch, overriding the channel's default.
                          * @enum {string}
                          */
                         gitBranch?: "midnight";
                         /**
                          * Format: uuid
-                         * @description Pin this job to a specific build: a build ID, as returned in `build.id` on any job response or by `GET /v1/simc/builds`. Available on plans that include build pinning. The build must be from the last 30 days and on the requested branch; if it is unavailable when the job runs, the job falls back to `channel`.
+                         * @description Pin this job to a build ID, from `build.id` on a job response or `GET /v1/simc/builds`. The build must be from the last 30 days and on the requested branch; if it is unavailable when the job runs, the job falls back to `channel`.
                          */
                         id?: string;
                     };
                     profile: {
-                        /** @description SimC profile text to execute (the content you would normally paste into a local simc run). Maximum 5 MB (UTF-8 encoded). */
+                        /** @description SimC profile text, as you would run it locally. Maximum 5 MB (UTF-8). */
                         text: string;
                     };
                     /**
-                     * @description Execution options for this job. Multistage execution is skipped if your input contains unsupported patterns or directives.
+                     * @description Execution options. Multistage is skipped if your input has directives it does not support.
                      * @example {
                      *       "multiStage": true
                      *     }
                      */
                     runtime?: {
-                        /** @description Opt-in to multistage execution with automatic culling between stages. When false or omitted, the sim runs in a single pass. */
+                        /** @description Run the sim in stages, culling profilesets between them. Defaults to a single pass. */
                         multiStage?: boolean;
-                        /** @description Optional spend cap for this job, in credits. A job that reaches it is stopped with `errorCode` `max_credits_reached` and billed the cap. The ceiling applied is returned in the response as `runtime.ceiling.maxCredits`; the maximum is `plan.maxCreditsPerJob` on `GET /v1/simc/usage`. */
+                        /** @description Spend cap for this job, in credits. A job that reaches it is stopped with `errorCode` `max_credits_reached` and billed the cap. The maximum is `plan.maxCreditsPerJob` on `GET /v1/simc/usage`. */
                         maxCredits?: number;
                         /**
                          * @deprecated
-                         * @description Deprecated: use `maxCredits`. Interpreted as a spend cap of this many seconds at the basis rate of 32 credits per second (`maxCredits = maxRuntimeSeconds × 32`). Do not send both fields.
+                         * @description Deprecated: use `maxCredits` (`maxRuntimeSeconds × 32`). Do not send both.
                          */
                         maxRuntimeSeconds?: number;
-                        /** @description Maximum time this job may wait in the queue before being auto-cancelled, in seconds. Defaults to your plan's queue window when omitted; see `plan.defaultQueueSeconds` and the `plan.maxQueueSeconds` maximum on `GET /v1/simc/usage`. The ceiling applied is returned in the response as `runtime.ceiling.queueSeconds`. */
+                        /** @description Seconds this job may wait in the queue before it is cancelled. Defaults to `plan.defaultQueueSeconds`, up to `plan.maxQueueSeconds`, on `GET /v1/simc/usage`. `economy` jobs get a longer default and maximum. The response returns the value applied as `runtime.ceiling.queueSeconds`. */
                         maxQueueSeconds?: number;
                     };
                     /**
-                     * @description Queue priority for this job. Higher priority runs first; same-priority jobs run in submission order. `high` adds a flat per-job fee only when it would buy a faster start, reported in `runtime.priorityFeeCredits`.
-                     * @default standard
+                     * @description Higher priority runs first; equal priorities run in submission order. Defaults to `plan.defaultPriority` and is capped at `plan.maxPriority`, both on `GET /v1/simc/usage`. `high` adds a per-job fee only when it buys a faster start, reported in `runtime.priorityFeeCredits`.
                      * @enum {string}
                      */
                     priority?: "background" | "standard" | "high";
                     /**
-                     * @description What kind of work this is, so the scheduler can treat it accordingly. `interactive` (the default) starts as soon as capacity allows and suits sims a person is waiting on. `batch` is bulk work that may queue and drain over hours; it never delays interactive jobs, and you should set `runtime.maxQueueSeconds` to cover the wait. Only workloads listed in `plan.workloads` on `GET /v1/simc/usage` are accepted; most plans accept `interactive` only.
+                     * @description `interactive` (default): starts as soon as capacity allows, for sims someone is waiting on. `batch`: bulk work that may queue for hours; set `runtime.maxQueueSeconds` to cover the wait. `economy`: runs at reduced speed and uses none of your daily full-speed time. Only the workloads in `plan.workloads` on `GET /v1/simc/usage` are accepted.
                      * @default interactive
                      * @enum {string}
                      */
-                    workload?: "interactive" | "batch";
+                    workload?: "interactive" | "batch" | "economy";
                     /**
-                     * @description Opaque metadata echoed back unchanged for your own correlation or labels (for example `profileSource`, `characterRef`). Not used for scheduling or sim execution.
+                     * @description Your own labels, returned unchanged (for example `profileSource`, `characterRef`).
                      * @example {
                      *       "requestId": "req_12345",
                      *       "profileSource": "addon-export",
@@ -535,17 +736,17 @@ export interface operations {
                     metadata?: {
                         [key: string]: string;
                     };
-                    /** @description Optional per-job credentials. Used only for this job and never persisted. */
+                    /** @description Per-job credentials. Used only for this job and never stored. */
                     credentials?: {
-                        /** @description Battle.net API client ID. Must be provided together with `bnetClientSecret`. Lets SimC perform armory imports and resolve item data in your profile that is missing from the current build. */
+                        /** @description Battle.net API client ID, for `armory=` imports and item data missing from the build. Send with `bnetClientSecret`. */
                         bnetClientId?: string;
-                        /** @description Battle.net API client secret. Must be provided together with `bnetClientId`. */
+                        /** @description Battle.net API client secret. Send with `bnetClientId`. */
                         bnetClientSecret?: string;
                     };
-                    /** @description Optional webhook subscription settings for this job. Delivery URL and signing secret come from your webhook configuration. */
+                    /** @description Webhook subscription for this job. The URL and signing secret come from your webhook configuration. */
                     webhook?: {
                         /**
-                         * @description Webhook event types to subscribe to for this job.
+                         * @description Events to subscribe this job to.
                          * @example [
                          *       "job.terminal"
                          *     ]
@@ -553,7 +754,7 @@ export interface operations {
                         events: "job.terminal"[];
                     };
                     /**
-                     * @description Controls which output formats are produced. Omit for the default (JSON v2 only). Logs and input artifacts are always produced. For multistage runs, HTML is generated only for the final stage.
+                     * @description Output formats to produce. Logs, the input and a JSON report are always produced. For multistage runs, HTML covers only the final stage.
                      * @example {
                      *       "html": true,
                      *       "csv": true,
@@ -563,14 +764,14 @@ export interface operations {
                      *     }
                      */
                     artifacts?: {
-                        /** @description Whether to generate an HTML report. Defaults to `false`. */
+                        /** @description Generate an HTML report. Defaults to `false`. */
                         html?: boolean;
-                        /** @description Whether to generate a CSV result table (`result.csv`): one row per actor, then one row per profileset. Defaults to `false`. */
+                        /** @description Generate a CSV table (`result.csv`): one row per actor, then one per profileset. Defaults to `false`. */
                         csv?: boolean;
-                        /** @description JSON report options. A JSON report is always generated; use this to select the schema version. */
+                        /** @description JSON report options. A JSON report is always generated. */
                         json?: {
                             /**
-                             * @description JSON report schema version. `2` = stable v2.0.0, `3` = v3.0.0-alpha1 (experimental). Defaults to `2`.
+                             * @description JSON report schema: `2` (default) is stable v2.0.0, `3` is v3.0.0-alpha1 (experimental).
                              * @enum {string}
                              */
                             version?: "2" | "3";
@@ -583,19 +784,19 @@ export interface operations {
             /** @description Sim accepted and queued. */
             200: {
                 headers: {
-                    /** @description Your in-flight job count at the time of this response. */
+                    /** @description Your jobs in flight. */
                     "X-Active-Jobs": string;
-                    /** @description Your account ceiling for in-flight jobs. */
+                    /** @description Your limit on jobs in flight. */
                     "X-Max-Active-Jobs": string;
-                    /** @description Your account ceiling for job submissions per minute. */
+                    /** @description Submissions you can make per minute. */
                     "X-RateLimit-Limit": string;
-                    /** @description Submissions you can still make in the current minute. */
+                    /** @description Submissions left in the current minute. */
                     "X-RateLimit-Remaining": string;
-                    /** @description Unix epoch seconds when your remaining submissions refill. */
+                    /** @description When your submissions refill, in Unix epoch seconds. */
                     "X-RateLimit-Reset": string;
-                    /** @description Correlation id for this request, present on every response. The same value is echoed in the `requestId` field of error bodies. */
+                    /** @description Request ID, also in error bodies as `requestId`. */
                     "X-Request-Id": string;
-                    /** @description Present and equal to `true` only when the response is a replay of an earlier submission with the same `idempotency-key`. Absent on fresh submissions, including the first request that consumed the key. */
+                    /** @description `true` when the response replays an earlier submission with the same `idempotency-key`. Absent otherwise. */
                     "X-Idempotent-Replay"?: "true";
                     [name: string]: unknown;
                 };
@@ -603,41 +804,65 @@ export interface operations {
                     "application/json": {
                         success: boolean;
                         id: string;
+                        /**
+                         * @description The priority your job runs at: `requestedPriority`, capped at `plan.maxPriority`, and `standard` when `workload` is `economy`.
+                         * @enum {string}
+                         */
+                        priority: "background" | "standard" | "high";
+                        /**
+                         * @description The priority you asked for, or `plan.defaultPriority` when you set none.
+                         * @enum {string}
+                         */
+                        requestedPriority: "background" | "standard" | "high";
+                        /**
+                         * @description The workload your job runs as. An `interactive` request runs as `economy`, at reduced speed, once your daily full-speed time is used, unless credits keep it at full speed.
+                         * @enum {string}
+                         */
+                        workload: "interactive" | "batch" | "economy";
+                        /**
+                         * @description The workload you asked for. Differs from `workload` when your job was moved to `economy`.
+                         * @enum {string}
+                         */
+                        requestedWorkload: "interactive" | "batch" | "economy";
                         runtime: {
                             ceiling: {
-                                /** @description The per-job credit ceiling that applied to this run: the usage at which the job is stopped with `errorCode` `max_credits_reached`. Your `runtime.maxCredits` when the submission set one; otherwise the plan ceiling (`plan.maxCreditsPerJob` on `GET /v1/simc/usage`). */
+                                /** @description Credits at which this job is stopped with `errorCode` `max_credits_reached`: your `runtime.maxCredits`, or `plan.maxCreditsPerJob` when you set none. */
                                 maxCredits: number | null;
                                 /**
                                  * @deprecated
-                                 * @description Deprecated: use `maxCredits`. The same ceiling expressed in seconds at the basis rate of 32 credits per second.
+                                 * @description Deprecated: use `maxCredits`.
                                  */
                                 runtimeSeconds: number | null;
-                                /** @description The queue timeout ceiling that applied to this run, in seconds. Jobs that wait in the queue longer than this are auto-cancelled with `errorCode` `queue_timeout`. View the maximum at `GET /v1/simc/usage` under `plan.maxQueueSeconds`. */
+                                /** @description Seconds this job may wait in the queue before it is cancelled with `errorCode` `queue_timeout`. */
                                 queueSeconds: number | null;
                             };
-                            /** @description Priority fee for this job, included in the credit reservation. `0` when no fee applied. */
+                            /** @description Priority fee in credits. `0` when no fee applied. */
                             priorityFeeCredits?: number;
+                            /** @description Variants your sim runs: its profilesets, `copy=` and `set=` actors, or 1 when it has none. Null when not recorded. */
+                            variants: number | null;
+                            /** @description Your sim's size, checked against `plan.maxIterationsPerJob`: `variants`, plus your base profile when it has profilesets, `copy=` or `set=` actors, times the iterations each is counted at. That is your input's `iterations=`, at most 1,000,000; without it, by the `target_error` your sim runs at, yours or SimC's default: 100,000 below 0.1, 25,000 from 0.1 to 0.2, 5,000 above 0.2. Multistage sims count 5,000. Null when not recorded. */
+                            iterations: number | null;
                         };
                         links: components["schemas"]["JobLinks"];
-                        /** @description Warnings about your input. Omitted when there are none. The job still runs at the clamped or floored value. Lists the first 16 in line order, with the total in `warningsCount`. */
+                        /** @description Warnings about your input; the job still runs, using each warning's `applied` value. Omitted when there are none. Lists the first 16 in line order; `warningsCount` has the total. */
                         warnings?: {
                             /**
-                             * @description Machine-readable warning category. `iterations_clamped` for `iterations=` values above the platform safety cap; `target_error_floored` for `target_error=` values below the platform safety floor.
+                             * @description `iterations_clamped`: `iterations=` was above the cap. `target_error_floored`: `target_error=` was below the floor. `iterations_ignored_by_multistage`: your sim's multistage stages don't use `iterations=`.
                              * @enum {string}
                              */
-                            kind: "iterations_clamped" | "target_error_floored";
+                            kind: "iterations_clamped" | "target_error_floored" | "iterations_ignored_by_multistage";
                             /** @description 1-indexed line number in your input. */
                             line: number;
                             /** @description The value as written in your input. */
                             requested: number;
-                            /** @description The clamped or floored value the sim runs with. */
+                            /** @description The value the sim runs with. For `iterations_ignored_by_multistage`, the most iterations a stage runs per profile. */
                             applied: number;
-                            /** @description Human-readable explanation paired with `kind`. */
+                            /** @description Explanation of the warning. */
                             message: string;
                         }[];
-                        /** @description Total number of warnings about your input. Omitted when there are none. */
+                        /** @description Total warnings about your input. Omitted when there are none. */
                         warningsCount?: number;
-                        /** @description Notices about deprecated request fields your submission used. Omitted when there are none. The job is unaffected. */
+                        /** @description Deprecated request fields your submission used. Omitted when there are none. */
                         deprecations?: {
                             /** @description The deprecated request field, for example `runtime.maxRuntimeSeconds`. */
                             field: string;
@@ -652,7 +877,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Your request was missing required input or failed validation. See `error` for the specific issue. */
+            /** @description Your request failed validation. See `error`. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -667,14 +892,14 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
                     };
                 };
             };
-            /** @description Your API token is missing, invalid, or not authorized for this request. See `code` for the specific reason. */
+            /** @description Your API key is missing, invalid, or not allowed. See `code`. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -690,14 +915,14 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
                     };
                 };
             };
-            /** @description The request was rejected because your account has insufficient credits or is inactive. See `code` and `meta` for details. For credit shortfalls, `meta.maxAffordableCredits` indicates the largest `runtime.maxCredits` your current balance can cover. */
+            /** @description Your account is inactive or has too few credits for this job. See `code` and `meta`. */
             402: {
                 headers: {
                     [name: string]: unknown;
@@ -708,35 +933,35 @@ export interface operations {
                         code: string;
                         meta: {
                             reason: string;
-                            /** @description The per-job credit ceiling the rejected submission would have run under: your `runtime.maxCredits` if set, otherwise the plan ceiling. */
+                            /** @description The credit ceiling the submission would have run under. */
                             ceilingMaxCredits?: number;
-                            /** @description Largest `runtime.maxCredits` your current balance covers (after any priority fee). */
+                            /** @description Largest `runtime.maxCredits` your credits cover, after any priority fee. */
                             maxAffordableCredits?: number;
                             /**
                              * @deprecated
-                             * @description Deprecated: `ceilingMaxCredits` expressed in seconds at the basis rate of 32 credits per second.
+                             * @description Deprecated: use `ceilingMaxCredits`.
                              */
                             ceilingRuntimeSeconds?: number;
                             /**
                              * @deprecated
-                             * @description Deprecated: `maxAffordableCredits` expressed in seconds at the basis rate of 32 credits per second.
+                             * @description Deprecated: use `maxAffordableCredits`.
                              */
                             maxAffordableRuntimeSeconds?: number;
                             /**
                              * Format: uri
-                             * @description Link to the relevant credits/billing docs for this rejection.
+                             * @description Link to the documentation for this rejection.
                              */
                             docsUrl?: string;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
                     };
                 };
             };
-            /** @description The supplied `idempotency-key` was previously used with a different request payload. `meta.originalJobId` is the id of the job that originally consumed the key. */
+            /** @description The `idempotency-key` was already used with a different payload. `meta.originalJobId` is the job that used it. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -749,13 +974,13 @@ export interface operations {
                         meta: {
                             /** @enum {string} */
                             reason: "idempotency_key_reuse";
-                            /** @description ID of the job that originally consumed this idempotency key. */
+                            /** @description The job that used this idempotency key. */
                             originalJobId: string;
                             /** Format: uri */
                             docsUrl?: string;
                         };
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -777,14 +1002,14 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
                     };
                 };
             };
-            /** @description Your input was rejected. `code` is `input_sanitized_rejected` when your profile contains directives Simmit does not allow, `too_many_variants` when it expands past your account variant limit, `build_pin_not_allowed` when your plan does not include build pinning, `build_pin_unavailable` when the pinned `build.id` cannot be used, or `workload_not_allowed` when your plan does not include the requested `workload`. `meta.message` explains the rejection. */
+            /** @description Your input was rejected. `code`: `input_sanitized_rejected` (directives Simmit does not allow), `too_many_variants` (over your variant limit), `iterations_exceeds_policy` (over `plan.maxIterationsPerJob`), `build_pin_not_allowed` (your plan has no build pinning), `build_pin_unavailable` (the pinned `build.id` cannot be used), `workload_not_allowed` (your plan does not include the `workload`). `meta.message` explains. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -793,34 +1018,42 @@ export interface operations {
                     "application/json": {
                         error: string;
                         /** @enum {string} */
-                        code: "input_sanitized_rejected" | "too_many_variants" | "build_pin_not_allowed" | "build_pin_unavailable" | "workload_not_allowed";
+                        code: "input_sanitized_rejected" | "too_many_variants" | "iterations_exceeds_policy" | "build_pin_not_allowed" | "build_pin_unavailable" | "workload_not_allowed";
                         meta: {
                             /** @enum {string} */
-                            reason: "input_sanitized_rejected" | "too_many_variants" | "build_pin_not_allowed" | "build_pin_unavailable" | "workload_not_allowed";
-                            /** @description Human-readable explanation of why the input was rejected. */
+                            reason: "input_sanitized_rejected" | "too_many_variants" | "iterations_exceeds_policy" | "build_pin_not_allowed" | "build_pin_unavailable" | "workload_not_allowed";
+                            /** @description Why the input was rejected. */
                             message: string;
                             /**
                              * Format: uri
                              * @description Link to the documentation for this rejection.
                              */
                             docsUrl: string;
-                            /** @description A sample of rejected lines. The full count may exceed the sample — see `blockedCount` and `blockedTruncated`. */
+                            /** @description A sample of rejected lines; `blockedCount` has the total. */
                             blocked: {
                                 line: number;
                                 text: string;
                                 /** @description The directive the line matched, such as `output` or `save_*`, or `bare_input_token` for a word without `=`. */
                                 directive: string;
-                                /** @description Human-readable explanation paired with `directive`. */
+                                /** @description Why the line was rejected. */
                                 message: string;
                             }[];
-                            /** @description Total number of rejected lines. */
+                            /** @description Rejected lines in total. */
                             blockedCount: number;
                             /** @description `true` when more lines were rejected than included in `blocked`. */
                             blockedTruncated: boolean;
-                            /** @description Simulated variants your input expands to, counting `profileset`, `copy`, and `set` directives. */
+                            /** @description Variants your input expands to: its `profileset`, `copy` and `set` directives. */
                             totalVariants?: number;
                             /** @description Maximum simulated variants per sim for your account. */
                             maxVariants?: number;
+                            /** @description Your sim's size, the number checked against `maxIterationsPerJob`. Counted as `runtime.iterations` is. */
+                            iterations?: number;
+                            /** @description Variants your sim runs: its profilesets, `copy=` and `set=` actors, or 1 when it has none. */
+                            variants?: number;
+                            /** @description Iterations each profile is counted at, as described on `runtime.iterations`. */
+                            iterationsPerVariant?: number;
+                            /** @description `plan.maxIterationsPerJob` on `GET /v1/simc/usage`. */
+                            maxIterationsPerJob?: number;
                             /**
                              * Format: uri
                              * @description Link to your account page, where an upgrade can be requested.
@@ -837,34 +1070,34 @@ export interface operations {
                              * @description The rejected `workload`.
                              * @enum {string}
                              */
-                            workload?: "interactive" | "batch";
+                            workload?: "interactive" | "batch" | "economy";
                             /** @description Workloads your account accepts, default first. */
-                            allowedWorkloads?: ("interactive" | "batch")[];
+                            allowedWorkloads?: ("interactive" | "batch" | "economy")[];
                         };
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
                     };
                 };
             };
-            /** @description Your account has exceeded its request rate or in-flight job limit. See `code` and `meta` for the specific cause. `Retry-After` carries the next-attempt time. */
+            /** @description You are over your request rate or in-flight job limit; see `code`. `Retry-After` says when to retry. */
             429: {
                 headers: {
                     /** @description Seconds to wait before retrying. */
                     "Retry-After": string;
-                    /** @description Your in-flight job count at the time of this response. */
+                    /** @description Your jobs in flight. */
                     "X-Active-Jobs"?: string;
-                    /** @description Your account ceiling for in-flight jobs. */
+                    /** @description Your limit on jobs in flight. */
                     "X-Max-Active-Jobs"?: string;
-                    /** @description Your account ceiling for job submissions per minute. */
+                    /** @description Submissions you can make per minute. */
                     "X-RateLimit-Limit"?: string;
-                    /** @description Submissions you can still make in the current minute. */
+                    /** @description Submissions left in the current minute. */
                     "X-RateLimit-Remaining"?: string;
-                    /** @description Unix epoch seconds when your remaining submissions refill. */
+                    /** @description When your submissions refill, in Unix epoch seconds. */
                     "X-RateLimit-Reset"?: string;
-                    /** @description Correlation id for this request, present on every response. The same value is echoed in the `requestId` field of error bodies. */
+                    /** @description Request ID, also in error bodies as `requestId`. */
                     "X-Request-Id": string;
                     [name: string]: unknown;
                 };
@@ -878,7 +1111,7 @@ export interface operations {
                             scope: "developer";
                         };
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -889,25 +1122,25 @@ export interface operations {
                         meta: {
                             /** @enum {string} */
                             reason: "max_active_jobs_exceeded";
-                            /** @description Maximum number of jobs your account can have in flight. */
+                            /** @description Most jobs your account can have in flight. */
                             maxActiveJobs: number;
                             /** @description Jobs your account had in flight when this request was rejected. */
                             activeJobs: number;
                         };
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
                     };
                 };
             };
-            /** @description Your sim was not accepted right now. `code` indicates the cause: `queue_unavailable` when the queue is full or paused, `queue_health_unknown` when queue health cannot be confirmed, `secret_store_unavailable` when per-job credentials supplied with the request could not be stored, or `api_maintenance` during planned maintenance. `Retry-After` carries the next-attempt time. */
+            /** @description Your sim was not accepted right now. `code`: `queue_unavailable` (queue full or paused), `queue_health_unknown` (queue health cannot be confirmed), `secret_store_unavailable` (your per-job credentials could not be stored), `api_maintenance` (planned maintenance). `Retry-After` says when to retry. */
             503: {
                 headers: {
                     /** @description Seconds to wait before retrying. */
                     "Retry-After": string;
-                    /** @description Correlation id for this request, present on every response. The same value is echoed in the `requestId` field of error bodies. */
+                    /** @description Request ID, also in error bodies as `requestId`. */
                     "X-Request-Id": string;
                     [name: string]: unknown;
                 };
@@ -923,7 +1156,7 @@ export interface operations {
                             queueHealth: string;
                         };
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -937,7 +1170,7 @@ export interface operations {
                             laneId: string;
                         };
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -950,7 +1183,7 @@ export interface operations {
                             reason: "secret_store_unavailable";
                         };
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -963,7 +1196,7 @@ export interface operations {
                             retryAfterSeconds: number;
                         };
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -983,15 +1216,19 @@ export interface operations {
             content: {
                 "application/json": {
                     profile: {
-                        /** @description SimC profile text to check. Maximum 5 MB (UTF-8 encoded). */
+                        /** @description SimC profile text to check. Maximum 5 MB (UTF-8). */
                         text: string;
                     };
-                    /** @description The Battle.net credentials your submission will carry. With them, `armory=` lines pass as they would on submit. Used only for this check and never persisted. */
+                    /** @description The Battle.net credentials your submission will carry, so `armory=` lines pass as they would on submit. Never stored. */
                     credentials?: {
-                        /** @description Battle.net API client ID. Must be provided together with `bnetClientSecret`. Lets SimC perform armory imports and resolve item data in your profile that is missing from the current build. */
+                        /** @description Battle.net API client ID, for `armory=` imports and item data missing from the build. Send with `bnetClientSecret`. */
                         bnetClientId?: string;
-                        /** @description Battle.net API client secret. Must be provided together with `bnetClientId`. */
+                        /** @description Battle.net API client secret. Send with `bnetClientId`. */
                         bnetClientSecret?: string;
+                    };
+                    runtime?: {
+                        /** @description Whether your submission will set `runtime.multiStage`; the profile is sized and warned to match. */
+                        multiStage?: boolean;
                     };
                 };
             };
@@ -1006,28 +1243,28 @@ export interface operations {
                     "application/json": {
                         /** @enum {boolean} */
                         success: true;
-                        /** @description Warnings about your input. Omitted when there are none. A sim submitted with this profile runs at the clamped or floored value. Lists the first 16 in line order, with the total in `warningsCount`. */
+                        /** @description Warnings about your input; a sim submitted with it uses each warning's `applied` value. Omitted when there are none. Lists the first 16 in line order; `warningsCount` has the total. */
                         warnings?: {
                             /**
-                             * @description Machine-readable warning category. `iterations_clamped` for `iterations=` values above the platform safety cap; `target_error_floored` for `target_error=` values below the platform safety floor.
+                             * @description `iterations_clamped`: `iterations=` was above the cap. `target_error_floored`: `target_error=` was below the floor. `iterations_ignored_by_multistage`: your sim's multistage stages don't use `iterations=`.
                              * @enum {string}
                              */
-                            kind: "iterations_clamped" | "target_error_floored";
+                            kind: "iterations_clamped" | "target_error_floored" | "iterations_ignored_by_multistage";
                             /** @description 1-indexed line number in your input. */
                             line: number;
                             /** @description The value as written in your input. */
                             requested: number;
-                            /** @description The clamped or floored value the sim runs with. */
+                            /** @description The value the sim runs with. For `iterations_ignored_by_multistage`, the most iterations a stage runs per profile. */
                             applied: number;
-                            /** @description Human-readable explanation paired with `kind`. */
+                            /** @description Explanation of the warning. */
                             message: string;
                         }[];
-                        /** @description Total number of warnings about your input. Omitted when there are none. */
+                        /** @description Total warnings about your input. Omitted when there are none. */
                         warningsCount?: number;
                     };
                 };
             };
-            /** @description Your request was missing required input or failed validation. See `error` for the specific issue. */
+            /** @description Your request failed validation. See `error`. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1042,14 +1279,14 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
                     };
                 };
             };
-            /** @description Your API token is missing, invalid, or not authorized for this request. See `code` for the specific reason. */
+            /** @description Your API key is missing, invalid, or not allowed. See `code`. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1065,7 +1302,7 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -1087,14 +1324,14 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
                     };
                 };
             };
-            /** @description Your profile would be rejected if submitted. `code` is `input_sanitized_rejected` when it contains directives Simmit does not allow, or `too_many_variants` when it expands past your account variant limit. `meta.message` explains the rejection. */
+            /** @description Your profile would be rejected if submitted. `code`: `input_sanitized_rejected` (directives Simmit does not allow), `too_many_variants` (over your variant limit), `iterations_exceeds_policy` (over `plan.maxIterationsPerJob`). `meta.message` explains. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -1103,34 +1340,42 @@ export interface operations {
                     "application/json": {
                         error: string;
                         /** @enum {string} */
-                        code: "input_sanitized_rejected" | "too_many_variants";
+                        code: "input_sanitized_rejected" | "too_many_variants" | "iterations_exceeds_policy";
                         meta: {
                             /** @enum {string} */
-                            reason: "input_sanitized_rejected" | "too_many_variants";
-                            /** @description Human-readable explanation of why the input was rejected. */
+                            reason: "input_sanitized_rejected" | "too_many_variants" | "iterations_exceeds_policy";
+                            /** @description Why the input was rejected. */
                             message: string;
                             /**
                              * Format: uri
                              * @description Link to the documentation for this rejection.
                              */
                             docsUrl?: string;
-                            /** @description A sample of rejected lines. The full count may exceed the sample — see `blockedCount` and `blockedTruncated`. */
+                            /** @description A sample of rejected lines; `blockedCount` has the total. */
                             blocked?: {
                                 line: number;
                                 text: string;
                                 /** @description The directive the line matched, such as `output` or `save_*`, or `bare_input_token` for a word without `=`. */
                                 directive: string;
-                                /** @description Human-readable explanation paired with `directive`. */
+                                /** @description Why the line was rejected. */
                                 message: string;
                             }[];
-                            /** @description Total number of rejected lines. */
+                            /** @description Rejected lines in total. */
                             blockedCount?: number;
                             /** @description `true` when more lines were rejected than included in `blocked`. */
                             blockedTruncated?: boolean;
-                            /** @description Simulated variants your input expands to, counting `profileset`, `copy`, and `set` directives. */
+                            /** @description Variants your input expands to: its `profileset`, `copy` and `set` directives. */
                             totalVariants?: number;
                             /** @description Maximum simulated variants per sim for your account. */
                             maxVariants?: number;
+                            /** @description Your sim's size, the number checked against `maxIterationsPerJob`. Counted as `runtime.iterations` is. */
+                            iterations?: number;
+                            /** @description Variants your sim runs: its profilesets, `copy=` and `set=` actors, or 1 when it has none. */
+                            variants?: number;
+                            /** @description Iterations each profile is counted at, as described on `runtime.iterations`. */
+                            iterationsPerVariant?: number;
+                            /** @description `plan.maxIterationsPerJob` on `GET /v1/simc/usage`. */
+                            maxIterationsPerJob?: number;
                             /**
                              * Format: uri
                              * @description Link to your account page, where an upgrade can be requested.
@@ -1138,19 +1383,19 @@ export interface operations {
                             upgradeUrl?: string;
                         };
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
                     };
                 };
             };
-            /** @description Your account has exceeded its request rate. `Retry-After` carries the next-attempt time. */
+            /** @description You are over your request rate. `Retry-After` says when to retry. */
             429: {
                 headers: {
                     /** @description Seconds to wait before retrying. */
                     "Retry-After": string;
-                    /** @description Correlation id for this request, present on every response. The same value is echoed in the `requestId` field of error bodies. */
+                    /** @description Request ID, also in error bodies as `requestId`. */
                     "X-Request-Id": string;
                     [name: string]: unknown;
                 };
@@ -1164,7 +1409,7 @@ export interface operations {
                             scope: "developer";
                         };
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -1198,11 +1443,11 @@ export interface operations {
                             gitBranch: string;
                             /** @description Source repository for this SimC build. */
                             repo: string;
-                            /** @description Git commit hash of the SimC source used for this build. */
+                            /** @description Git commit of the SimC source for this build. */
                             commit: string;
-                            /** @description SimC program version for this build (e.g. `1205-01`). Null when not recorded. */
+                            /** @description SimC version (e.g. `1205-01`). Null when not recorded. */
                             simcVersion: string | null;
-                            /** @description The live and PTR WoW game versions this build simulates against. Null when not recorded. */
+                            /** @description Live and PTR WoW versions this build simulates. Null when not recorded. */
                             gameData: {
                                 live: {
                                     /** @description Live WoW game version (e.g. `12.0.7.68453`). */
@@ -1210,7 +1455,7 @@ export interface operations {
                                     /** @description Hotfix date of the live game data (`YYYY-MM-DD`). */
                                     hotfixDate: string;
                                 };
-                                /** @description PTR game version and hotfix date, or null if this build has no PTR data. */
+                                /** @description Null if this build has no PTR data. */
                                 ptr: {
                                     /** @description PTR WoW game version (e.g. `12.1.0.68569`). */
                                     version: string;
@@ -1228,10 +1473,10 @@ export interface operations {
                              * @description When this build was created.
                              */
                             createdAt: string;
-                            /** @description Upstream CI status for this commit, with per-check details. Null when CI data is unavailable. */
+                            /** @description Upstream CI status for this commit. Null when CI data is unavailable. */
                             ci: {
                                 /**
-                                 * @description Computed from gate checks: pass = all gated checks green, partial = gate checks green but other failures exist, fail = gate checks failed (fallback build), unknown = CI data unavailable.
+                                 * @description `pass`: all gated checks green. `partial`: gated checks green, others failed. `fail`: gated checks failed. `unknown`: CI data unavailable.
                                  * @enum {string}
                                  */
                                 status: "pass" | "partial" | "fail" | "unknown";
@@ -1240,9 +1485,9 @@ export interface operations {
                                     passed: number;
                                     failed: number;
                                 };
-                                /** @description Names of check runs with non-success conclusions (failure, cancelled, timed_out, action_required). Full GitHub job names as-is. */
+                                /** @description Names of the checks that did not succeed, as GitHub reports them. */
                                 failures: string[];
-                                /** @description Glob patterns describing which checks were used as the build gate. */
+                                /** @description Glob patterns of the checks that gate a build. */
                                 gatedOn: string[];
                                 /**
                                  * Format: date-time
@@ -1250,16 +1495,16 @@ export interface operations {
                                  */
                                 retrievedAt: string;
                             } | null;
-                            /** @description Bundled profiles available for this build. See https://docs.simmit.com/api/bundled-profiles for more. */
+                            /** @description Bundled profiles for this build. See https://docs.simmit.com/api/bundled-profiles. */
                             profiles: {
-                                /** @description Profile filenames this build accepts in submitted profile text (e.g. `MID1_Mage_Arcane.simc`). Reference one in your profile text on its own line or as `input=<filename>`. Sorted lexicographically. */
+                                /** @description Profile filenames this build accepts (e.g. `MID1_Mage_Arcane.simc`). Reference one on its own line or as `input=<filename>`. */
                                 manifest: string[];
                             } | null;
                         }[];
                     };
                 };
             };
-            /** @description Your API token is missing, invalid, or not authorized for this request. See `code` for the specific reason. */
+            /** @description Your API key is missing, invalid, or not allowed. See `code`. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1275,7 +1520,7 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -1289,7 +1534,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Build ID, as returned in `build.id` on any job response. */
+                /** @description Build ID, from `build.id` on a job response. */
                 id: string;
             };
             cookie?: never;
@@ -1307,11 +1552,11 @@ export interface operations {
                         gitBranch: string;
                         /** @description Source repository for this SimC build. */
                         repo: string;
-                        /** @description Git commit hash of the SimC source used for this build. */
+                        /** @description Git commit of the SimC source for this build. */
                         commit: string;
-                        /** @description SimC program version for this build (e.g. `1205-01`). Null when not recorded. */
+                        /** @description SimC version (e.g. `1205-01`). Null when not recorded. */
                         simcVersion: string | null;
-                        /** @description The live and PTR WoW game versions this build simulates against. Null when not recorded. */
+                        /** @description Live and PTR WoW versions this build simulates. Null when not recorded. */
                         gameData: {
                             live: {
                                 /** @description Live WoW game version (e.g. `12.0.7.68453`). */
@@ -1319,7 +1564,7 @@ export interface operations {
                                 /** @description Hotfix date of the live game data (`YYYY-MM-DD`). */
                                 hotfixDate: string;
                             };
-                            /** @description PTR game version and hotfix date, or null if this build has no PTR data. */
+                            /** @description Null if this build has no PTR data. */
                             ptr: {
                                 /** @description PTR WoW game version (e.g. `12.1.0.68569`). */
                                 version: string;
@@ -1337,10 +1582,10 @@ export interface operations {
                          * @description When this build was created.
                          */
                         createdAt: string;
-                        /** @description Upstream CI status for this commit, with per-check details. Null when CI data is unavailable. */
+                        /** @description Upstream CI status for this commit. Null when CI data is unavailable. */
                         ci: {
                             /**
-                             * @description Computed from gate checks: pass = all gated checks green, partial = gate checks green but other failures exist, fail = gate checks failed (fallback build), unknown = CI data unavailable.
+                             * @description `pass`: all gated checks green. `partial`: gated checks green, others failed. `fail`: gated checks failed. `unknown`: CI data unavailable.
                              * @enum {string}
                              */
                             status: "pass" | "partial" | "fail" | "unknown";
@@ -1349,9 +1594,9 @@ export interface operations {
                                 passed: number;
                                 failed: number;
                             };
-                            /** @description Names of check runs with non-success conclusions (failure, cancelled, timed_out, action_required). Full GitHub job names as-is. */
+                            /** @description Names of the checks that did not succeed, as GitHub reports them. */
                             failures: string[];
-                            /** @description Glob patterns describing which checks were used as the build gate. */
+                            /** @description Glob patterns of the checks that gate a build. */
                             gatedOn: string[];
                             /**
                              * Format: date-time
@@ -1359,9 +1604,9 @@ export interface operations {
                              */
                             retrievedAt: string;
                         } | null;
-                        /** @description Bundled profiles available for this build. See https://docs.simmit.com/api/bundled-profiles for more. */
+                        /** @description Bundled profiles for this build. See https://docs.simmit.com/api/bundled-profiles. */
                         profiles: {
-                            /** @description Profile filenames this build accepts in submitted profile text (e.g. `MID1_Mage_Arcane.simc`). Reference one in your profile text on its own line or as `input=<filename>`. Sorted lexicographically. */
+                            /** @description Profile filenames this build accepts (e.g. `MID1_Mage_Arcane.simc`). Reference one on its own line or as `input=<filename>`. */
                             manifest: string[];
                         } | null;
                     };
@@ -1382,14 +1627,14 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
                     };
                 };
             };
-            /** @description Your API token is missing, invalid, or not authorized for this request. See `code` for the specific reason. */
+            /** @description Your API key is missing, invalid, or not allowed. See `code`. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1405,7 +1650,7 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -1427,7 +1672,7 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -1450,11 +1695,11 @@ export interface operations {
             /** @description Full SimC job record. */
             200: {
                 headers: {
-                    /** @description Your in-flight job count at the time of this response. */
+                    /** @description Your jobs in flight. */
                     "X-Active-Jobs": string;
-                    /** @description Your account ceiling for in-flight jobs. */
+                    /** @description Your limit on jobs in flight. */
                     "X-Max-Active-Jobs": string;
-                    /** @description Correlation id for this request, present on every response. The same value is echoed in the `requestId` field of error bodies. */
+                    /** @description Request ID, also in error bodies as `requestId`. */
                     "X-Request-Id": string;
                     [name: string]: unknown;
                 };
@@ -1464,81 +1709,100 @@ export interface operations {
                         /** @enum {string} */
                         status: "pending" | "queued" | "starting" | "running" | "completed" | "failed" | "cancelled" | "timed_out";
                         /**
-                         * @description Effective priority the job is running at.
+                         * @description The priority your job runs at: `requestedPriority`, capped at `plan.maxPriority`, and `standard` when `workload` is `economy`.
                          * @enum {string}
                          */
                         priority: "background" | "standard" | "high";
+                        /**
+                         * @description The priority you asked for, or `plan.defaultPriority` when you set none.
+                         * @enum {string}
+                         */
+                        requestedPriority: "background" | "standard" | "high";
+                        /**
+                         * @description The workload your job runs as. An `interactive` request runs as `economy`, at reduced speed, once your daily full-speed time is used, unless credits keep it at full speed.
+                         * @enum {string}
+                         */
+                        workload: "interactive" | "batch" | "economy";
+                        /**
+                         * @description The workload you asked for. Differs from `workload` when your job was moved to `economy`.
+                         * @enum {string}
+                         */
+                        requestedWorkload: "interactive" | "batch" | "economy";
                         /** Format: date-time */
                         createdAt: string | null;
                         /**
                          * Format: date-time
-                         * @description When this job began executing. Null when the job has not yet started.
+                         * @description When this job started running. Null before it starts.
                          */
                         startedAt: string | null;
                         /** Format: date-time */
                         completedAt: string | null;
                         /**
                          * Format: date-time
-                         * @description When a cancel was requested. Null when no cancel has been requested.
+                         * @description When a cancel was requested. Null when none was.
                          */
                         cancelRequestedAt: string | null;
                         /** @enum {string|null} */
                         errorCode: "execution_interrupted" | "execution_timeout" | "max_credits_reached" | "credits_exhausted" | "execution_failed" | "build_unavailable" | "simulation_error" | "queue_timeout" | "input_invalid" | "insufficient_credits" | "user_cancelled" | "internal" | null;
-                        /** @description Human-readable explanation for the terminal status, paired with `errorCode`. */
+                        /** @description Explanation of `errorCode`. */
                         statusReason: string | null;
                         /** @description SimC process exit code. */
                         simcExitCode: string | null;
-                        /** @description Number of days artifacts are retained after `completedAt`. After this window, artifact endpoints return `410`. */
+                        /** @description Days artifacts are kept after `completedAt`. After that, artifact endpoints return `410`. */
                         retentionDays: number | null;
-                        /** @description Opaque metadata echoed back exactly as submitted (for example `profileSource`, `characterRef`). Not used for scheduling or sim execution. */
+                        /** @description Your metadata, exactly as submitted. */
                         metadata: {
                             [key: string]: unknown;
                         } | null;
                         runtime: {
-                            /** @description SimC process wall-clock time in milliseconds. Excludes setup and teardown time. Null if the job has not completed or the sim did not start. */
+                            /** @description SimC run time in milliseconds, excluding setup and teardown. Null if the job has not completed or the sim did not start. */
                             simDurationMs: number | null;
-                            /** @description Total wall-clock time from job start to completion (milliseconds). Includes sim execution, artifact generation, and post-processing. Null when the job has not yet run. */
+                            /** @description Time from job start to completion in milliseconds, including artifact generation. Null when the job has not run. */
                             totalDurationMs: number | null;
-                            /** @description Credits charged for this job, including any priority fee. `0` for terminal jobs with no billable work. Null until the job reaches a terminal state. */
+                            /** @description Credits this job used, including any priority fee. `0` when nothing was billable. Null until the job is terminal. */
                             creditsConsumed: number | null;
-                            /** @description Priority fee for this job, included in `creditsConsumed` when the job is billed. `0` when no fee applied. View the current fee from `GET /v1/simc/usage` under `plan.priorityFeeCredits.high`. */
+                            /** @description Priority fee in credits, included in `creditsConsumed`. `0` when no fee applied. */
                             priorityFeeCredits: number;
-                            /** @description Metering rate applied to this run, in credits per second of SimC runtime: `creditsConsumed` is this rate times `simDurationMs` rounded up to whole seconds, plus `priorityFeeCredits`. Null until the job is assigned to a machine. */
+                            /** @description Credits per second of SimC run time. `creditsConsumed` is this rate times `simDurationMs` rounded up to whole seconds, plus `priorityFeeCredits`. Null until the job is assigned to a machine. */
                             creditsPerSecond: number | null;
-                            /** @description vCPU count of the machine this run executed on. Null before execution. */
+                            /** @description vCPUs of the machine this job ran on. Null before it runs. */
                             vcpus: number | null;
                             ceiling: {
-                                /** @description The per-job credit ceiling that applied to this run: the usage at which the job is stopped with `errorCode` `max_credits_reached`. Your `runtime.maxCredits` when the submission set one; otherwise the plan ceiling (`plan.maxCreditsPerJob` on `GET /v1/simc/usage`). */
+                                /** @description Credits at which this job is stopped with `errorCode` `max_credits_reached`: your `runtime.maxCredits`, or `plan.maxCreditsPerJob` when you set none. */
                                 maxCredits: number | null;
                                 /**
                                  * @deprecated
-                                 * @description Deprecated: use `maxCredits`. The same ceiling expressed in seconds at the basis rate of 32 credits per second.
+                                 * @description Deprecated: use `maxCredits`.
                                  */
                                 runtimeSeconds: number | null;
-                                /** @description The queue timeout ceiling that applied to this run, in seconds. Jobs that wait in the queue longer than this are auto-cancelled with `errorCode` `queue_timeout`. View the maximum at `GET /v1/simc/usage` under `plan.maxQueueSeconds`. */
+                                /** @description Seconds this job may wait in the queue before it is cancelled with `errorCode` `queue_timeout`. */
                                 queueSeconds: number | null;
                             };
+                            /** @description Variants your sim runs: its profilesets, `copy=` and `set=` actors, or 1 when it has none. Null when not recorded. */
+                            variants: number | null;
+                            /** @description Your sim's size, checked against `plan.maxIterationsPerJob`: `variants`, plus your base profile when it has profilesets, `copy=` or `set=` actors, times the iterations each is counted at. That is your input's `iterations=`, at most 1,000,000; without it, by the `target_error` your sim runs at, yours or SimC's default: 100,000 below 0.1, 25,000 from 0.1 to 0.2, 5,000 above 0.2. Multistage sims count 5,000. Null when not recorded. */
+                            iterations: number | null;
                         };
-                        /** @description True if this job was retried automatically because of a platform error. The response reflects the latest retry attempt. */
+                        /** @description True if this job was retried automatically after a platform error. The response reflects the latest attempt. */
                         retried: boolean;
                         build: {
                             /**
                              * Format: uuid
-                             * @description Build ID. `GET /v1/simc/builds/{id}` returns the full build record.
+                             * @description Build ID. `GET /v1/simc/builds/{id}` returns the build.
                              */
                             id: string;
                             /** @enum {string} */
                             channel: "nightly" | "weekly" | "latest";
-                            /** @description Git commit hash of the SimC source used for this build. */
+                            /** @description Git commit of the SimC source for this build. */
                             commit: string;
-                            /** @description Compact upstream CI summary (status and failure count) for this commit. The full per-check breakdown is on `GET /v1/simc/builds/{id}`. Null when CI data is unavailable. */
+                            /** @description Upstream CI summary for this commit; `GET /v1/simc/builds/{id}` has each check. Null when CI data is unavailable. */
                             ci: {
                                 /**
-                                 * @description Computed CI status for the build commit. See GET /v1/simc/builds for full check details.
+                                 * @description CI status for the build commit.
                                  * @enum {string}
                                  */
                                 status: "pass" | "partial" | "fail" | "unknown";
-                                /** @description Number of CI checks with non-success conclusions (failure, cancelled, timed_out, action_required). See GET /v1/simc/builds for check names. */
+                                /** @description CI checks that did not succeed. `GET /v1/simc/builds` names them. */
                                 failed: number;
                             } | null;
                         } | null;
@@ -1546,7 +1810,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Your API token is missing, invalid, or not authorized for this request. See `code` for the specific reason. */
+            /** @description Your API key is missing, invalid, or not allowed. See `code`. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1562,7 +1826,7 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -1584,7 +1848,7 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -1615,81 +1879,100 @@ export interface operations {
                         /** @enum {string} */
                         status: "completed" | "failed" | "cancelled" | "timed_out";
                         /**
-                         * @description Effective priority the job is running at.
+                         * @description The priority your job runs at: `requestedPriority`, capped at `plan.maxPriority`, and `standard` when `workload` is `economy`.
                          * @enum {string}
                          */
                         priority: "background" | "standard" | "high";
+                        /**
+                         * @description The priority you asked for, or `plan.defaultPriority` when you set none.
+                         * @enum {string}
+                         */
+                        requestedPriority: "background" | "standard" | "high";
+                        /**
+                         * @description The workload your job runs as. An `interactive` request runs as `economy`, at reduced speed, once your daily full-speed time is used, unless credits keep it at full speed.
+                         * @enum {string}
+                         */
+                        workload: "interactive" | "batch" | "economy";
+                        /**
+                         * @description The workload you asked for. Differs from `workload` when your job was moved to `economy`.
+                         * @enum {string}
+                         */
+                        requestedWorkload: "interactive" | "batch" | "economy";
                         /** Format: date-time */
                         createdAt: string | null;
                         /**
                          * Format: date-time
-                         * @description When this job began executing. Null when the job has not yet started.
+                         * @description When this job started running. Null before it starts.
                          */
                         startedAt: string | null;
                         /** Format: date-time */
                         completedAt: string | null;
                         /**
                          * Format: date-time
-                         * @description When a cancel was requested. Null when no cancel has been requested.
+                         * @description When a cancel was requested. Null when none was.
                          */
                         cancelRequestedAt: string | null;
                         /** @enum {string|null} */
                         errorCode: "execution_interrupted" | "execution_timeout" | "max_credits_reached" | "credits_exhausted" | "execution_failed" | "build_unavailable" | "simulation_error" | "queue_timeout" | "input_invalid" | "insufficient_credits" | "user_cancelled" | "internal" | null;
-                        /** @description Human-readable explanation for the terminal status, paired with `errorCode`. */
+                        /** @description Explanation of `errorCode`. */
                         statusReason: string | null;
                         /** @description SimC process exit code. */
                         simcExitCode: string | null;
-                        /** @description Number of days artifacts are retained after `completedAt`. After this window, artifact endpoints return `410`. */
+                        /** @description Days artifacts are kept after `completedAt`. After that, artifact endpoints return `410`. */
                         retentionDays: number | null;
-                        /** @description Opaque metadata echoed back exactly as submitted (for example `profileSource`, `characterRef`). Not used for scheduling or sim execution. */
+                        /** @description Your metadata, exactly as submitted. */
                         metadata: {
                             [key: string]: unknown;
                         } | null;
                         runtime: {
-                            /** @description SimC process wall-clock time in milliseconds. Excludes setup and teardown time. Null if the job has not completed or the sim did not start. */
+                            /** @description SimC run time in milliseconds, excluding setup and teardown. Null if the job has not completed or the sim did not start. */
                             simDurationMs: number | null;
-                            /** @description Total wall-clock time from job start to completion (milliseconds). Includes sim execution, artifact generation, and post-processing. Null when the job has not yet run. */
+                            /** @description Time from job start to completion in milliseconds, including artifact generation. Null when the job has not run. */
                             totalDurationMs: number | null;
-                            /** @description Credits charged for this job, including any priority fee. `0` for terminal jobs with no billable work. Null until the job reaches a terminal state. */
+                            /** @description Credits this job used, including any priority fee. `0` when nothing was billable. Null until the job is terminal. */
                             creditsConsumed: number | null;
-                            /** @description Priority fee for this job, included in `creditsConsumed` when the job is billed. `0` when no fee applied. View the current fee from `GET /v1/simc/usage` under `plan.priorityFeeCredits.high`. */
+                            /** @description Priority fee in credits, included in `creditsConsumed`. `0` when no fee applied. */
                             priorityFeeCredits: number;
-                            /** @description Metering rate applied to this run, in credits per second of SimC runtime: `creditsConsumed` is this rate times `simDurationMs` rounded up to whole seconds, plus `priorityFeeCredits`. Null until the job is assigned to a machine. */
+                            /** @description Credits per second of SimC run time. `creditsConsumed` is this rate times `simDurationMs` rounded up to whole seconds, plus `priorityFeeCredits`. Null until the job is assigned to a machine. */
                             creditsPerSecond: number | null;
-                            /** @description vCPU count of the machine this run executed on. Null before execution. */
+                            /** @description vCPUs of the machine this job ran on. Null before it runs. */
                             vcpus: number | null;
                             ceiling: {
-                                /** @description The per-job credit ceiling that applied to this run: the usage at which the job is stopped with `errorCode` `max_credits_reached`. Your `runtime.maxCredits` when the submission set one; otherwise the plan ceiling (`plan.maxCreditsPerJob` on `GET /v1/simc/usage`). */
+                                /** @description Credits at which this job is stopped with `errorCode` `max_credits_reached`: your `runtime.maxCredits`, or `plan.maxCreditsPerJob` when you set none. */
                                 maxCredits: number | null;
                                 /**
                                  * @deprecated
-                                 * @description Deprecated: use `maxCredits`. The same ceiling expressed in seconds at the basis rate of 32 credits per second.
+                                 * @description Deprecated: use `maxCredits`.
                                  */
                                 runtimeSeconds: number | null;
-                                /** @description The queue timeout ceiling that applied to this run, in seconds. Jobs that wait in the queue longer than this are auto-cancelled with `errorCode` `queue_timeout`. View the maximum at `GET /v1/simc/usage` under `plan.maxQueueSeconds`. */
+                                /** @description Seconds this job may wait in the queue before it is cancelled with `errorCode` `queue_timeout`. */
                                 queueSeconds: number | null;
                             };
+                            /** @description Variants your sim runs: its profilesets, `copy=` and `set=` actors, or 1 when it has none. Null when not recorded. */
+                            variants: number | null;
+                            /** @description Your sim's size, checked against `plan.maxIterationsPerJob`: `variants`, plus your base profile when it has profilesets, `copy=` or `set=` actors, times the iterations each is counted at. That is your input's `iterations=`, at most 1,000,000; without it, by the `target_error` your sim runs at, yours or SimC's default: 100,000 below 0.1, 25,000 from 0.1 to 0.2, 5,000 above 0.2. Multistage sims count 5,000. Null when not recorded. */
+                            iterations: number | null;
                         };
-                        /** @description True if this job was retried automatically because of a platform error. The response reflects the latest retry attempt. */
+                        /** @description True if this job was retried automatically after a platform error. The response reflects the latest attempt. */
                         retried: boolean;
                         build: {
                             /**
                              * Format: uuid
-                             * @description Build ID. `GET /v1/simc/builds/{id}` returns the full build record.
+                             * @description Build ID. `GET /v1/simc/builds/{id}` returns the build.
                              */
                             id: string;
                             /** @enum {string} */
                             channel: "nightly" | "weekly" | "latest";
-                            /** @description Git commit hash of the SimC source used for this build. */
+                            /** @description Git commit of the SimC source for this build. */
                             commit: string;
-                            /** @description Compact upstream CI summary (status and failure count) for this commit. The full per-check breakdown is on `GET /v1/simc/builds/{id}`. Null when CI data is unavailable. */
+                            /** @description Upstream CI summary for this commit; `GET /v1/simc/builds/{id}` has each check. Null when CI data is unavailable. */
                             ci: {
                                 /**
-                                 * @description Computed CI status for the build commit. See GET /v1/simc/builds for full check details.
+                                 * @description CI status for the build commit.
                                  * @enum {string}
                                  */
                                 status: "pass" | "partial" | "fail" | "unknown";
-                                /** @description Number of CI checks with non-success conclusions (failure, cancelled, timed_out, action_required). See GET /v1/simc/builds for check names. */
+                                /** @description CI checks that did not succeed. `GET /v1/simc/builds` names them. */
                                 failed: number;
                             } | null;
                         } | null;
@@ -1697,19 +1980,19 @@ export interface operations {
                         result: {
                             summary: {
                                 /**
-                                 * @description The metric that `mean` and `mean_error` are reported in and that profilesets are ranked by. `dps` is the main actor's own damage. `raid_dps` is the group's combined damage, returned when your input sets `profileset_metric=raid_dps`; `mainActor.mean` is then the group total.
+                                 * @description What `mean` and `mean_error` measure and profilesets are ranked by. `dps`: the main actor's damage. `raid_dps`: the group's combined damage, when your input sets `profileset_metric=raid_dps`; `mainActor.mean` is then the group total.
                                  * @enum {string}
                                  */
                                 metric: "dps" | "raid_dps";
-                                /** @description Result for the headline actor (selected by SimC's `profileset_main_actor_index` directive, default `0`). */
+                                /** @description The headline actor, chosen by SimC's `profileset_main_actor_index` (default `0`). */
                                 mainActor: {
                                     /** @description Actor name as defined in your profile. */
                                     name: string;
                                     /** @description Mean DPS across all iterations. */
                                     mean: number;
-                                    /** @description The ± DPS error on `mean` — the half-width of its 95% confidence interval, equal to `mean_stddev` × 1.96. */
+                                    /** @description The ± DPS error on `mean`: half the width of its 95% confidence interval (`mean_stddev` × 1.96). */
                                     mean_error: number;
-                                    /** @description Standard error of the mean DPS (the standard deviation of the mean estimate). */
+                                    /** @description Standard error of the mean DPS. */
                                     mean_stddev: number;
                                     /** @description Standard deviation of DPS across iterations. */
                                     stddev?: number;
@@ -1717,19 +2000,19 @@ export interface operations {
                                     min?: number;
                                     /** @description Highest single-iteration DPS. */
                                     max?: number;
-                                    /** @description Profileset sweep results scoped to this actor (mirrors SimC's `sim.profilesets` block shape). Omitted when no profileset results are available — either the input declared no profilesets, or none were produced. */
+                                    /** @description Profileset results. Omitted when there are none. */
                                     profilesets?: {
-                                        /** @description Total number of profilesets in the sim result. When this exceeds the length of `results`, the array was truncated to the top 200 entries by DPS. The `profileset_results` artifact carries the full set. */
+                                        /** @description Profilesets in the sim. `results` holds at most the top 200 by DPS; the `profileset_results` artifact has them all. */
                                         count: number;
-                                        /** @description Profileset sweep entries, ranked by DPS (highest first). Truncated to the top 200 entries — see `count` and the `profileset_results` artifact for the full set. */
+                                        /** @description Profilesets ranked by DPS, highest first; at most the top 200. */
                                         results: {
                                             /** @description Profileset name as defined in your input. */
                                             name: string;
                                             /** @description Mean DPS across all iterations. */
                                             mean: number;
-                                            /** @description The ± DPS error on `mean` — the half-width of its 95% confidence interval, equal to `mean_stddev` × 1.96. */
+                                            /** @description The ± DPS error on `mean`: half the width of its 95% confidence interval (`mean_stddev` × 1.96). */
                                             mean_error: number;
-                                            /** @description Standard error of the mean DPS (the standard deviation of the mean estimate). */
+                                            /** @description Standard error of the mean DPS. */
                                             mean_stddev: number;
                                             /** @description Standard deviation of DPS across iterations. */
                                             stddev?: number;
@@ -1737,14 +2020,14 @@ export interface operations {
                                             min?: number;
                                             /** @description Highest single-iteration DPS. */
                                             max?: number;
-                                            /** @description For multistage runs, the highest stage this profileset reached. Earlier stages run at a coarser `target_error`, so their results carry a larger `mean_error`. `1` for single-pass runs. */
+                                            /** @description The highest stage this profileset reached; earlier stages carry a larger `mean_error`. `1` for single-pass runs. */
                                             stage: number;
                                         }[];
                                     };
                                 } | null;
-                                /** @description The talent build the run simulated for the headline actor, as an in-game export string. Omitted when the run produced no report. */
+                                /** @description The headline actor's talents, as an in-game export string. Omitted when the run produced no report. */
                                 talents?: string;
-                                /** @description The headline actor's equipped items, in the report's slot order. Each entry carries the ids the item was simulated with. Omitted when the run produced no report. */
+                                /** @description The headline actor's equipped items, in the report's slot order. Omitted when the run produced no report. */
                                 gear?: {
                                     /** @description SimC slot name (`head`, `neck`, …, `main_hand`, `off_hand`). */
                                     slot: string;
@@ -1752,7 +2035,7 @@ export interface operations {
                                     id: number;
                                     /** @description SimC's snake_case item name. */
                                     name: string;
-                                    /** @description The fully resolved item level the item was simulated at. */
+                                    /** @description Item level the item was simulated at. */
                                     ilevel?: number;
                                     /** @description Bonus ids applied to the item. */
                                     bonusIds?: number[];
@@ -1763,19 +2046,19 @@ export interface operations {
                                     /** @description A crafted item's chosen stat ids. */
                                     craftedStatIds?: number[];
                                 }[];
-                                /** @description Per-actor results for a `copy=` comparison, where each actor runs as its own sim. Includes the baseline actor. Omitted for profileset sweeps and single-profile runs. */
+                                /** @description Per-actor results for a `copy=` comparison, baseline included. Omitted for other runs. */
                                 actors?: {
-                                    /** @description Total number of actors in the comparison. When this exceeds the length of `results`, the array was truncated to the top 200 entries by DPS. The `actor_results` artifact carries the full set. */
+                                    /** @description Actors in the comparison. `results` holds at most the top 200 by DPS; the `actor_results` artifact has them all. */
                                     count: number;
-                                    /** @description Per-actor entries, ranked by DPS (highest first). Truncated to the top 200 entries — see `count` and the `actor_results` artifact for the full set. */
+                                    /** @description Actors ranked by DPS, highest first; at most the top 200. */
                                     results: {
                                         /** @description Actor name as defined in your profile. */
                                         name: string;
                                         /** @description Mean DPS across all iterations. */
                                         mean: number;
-                                        /** @description The ± DPS error on `mean` — the half-width of its 95% confidence interval, equal to `mean_stddev` × 1.96. */
+                                        /** @description The ± DPS error on `mean`: half the width of its 95% confidence interval (`mean_stddev` × 1.96). */
                                         mean_error: number;
-                                        /** @description Standard error of the mean DPS (the standard deviation of the mean estimate). */
+                                        /** @description Standard error of the mean DPS. */
                                         mean_stddev: number;
                                         /** @description Standard deviation of DPS across iterations. */
                                         stddev?: number;
@@ -1785,7 +2068,7 @@ export interface operations {
                                         max?: number;
                                     }[];
                                 };
-                                /** @description The per-actor iteration count the run used. Omitted for multistage runs, which use a per-stage schedule. */
+                                /** @description Iterations per actor. Omitted for multistage runs. */
                                 iterations?: number;
                                 /** @description Multistage execution metadata. */
                                 multiStage: {
@@ -1796,17 +2079,17 @@ export interface operations {
                                      * @enum {string}
                                      */
                                     reason: "disabled_by_option" | "unsupported_stage_sensitive_directive" | "unsupported_copy_set_only" | "unsupported_mixed_profileset_copy_set" | "no_variants_in_input" | "unsupported_multi_actor" | "no_profileset_candidates" | "below_min_candidates" | "eligible_profileset_only";
-                                    /** @description Per-stage funnel for multistage execution, in execution order. Empty for single-pass runs. */
+                                    /** @description Stages in the order they ran. Empty for single-pass runs. */
                                     stages: {
                                         /** @description Stage number (1-indexed). */
                                         stage: number;
-                                        /** @description Human-readable stage name (`initial`, `intermediate`, `final`). */
+                                        /** @description Stage name (`initial`, `intermediate`, `final`). */
                                         label: string;
-                                        /** @description Number of profilesets executed in this stage. */
+                                        /** @description Profilesets run in this stage. */
                                         profilesets: number;
-                                        /** @description Number of profilesets eliminated at the end of this stage based on ranking. `0` for the last executed stage. */
+                                        /** @description Profilesets dropped at the end of this stage. `0` for the last stage run. */
                                         culled: number;
-                                        /** @description Total iterations the profilesets in this stage ran, summed across them. Excludes the headline actor's own iterations. */
+                                        /** @description Iterations this stage's profilesets ran, summed. Excludes the headline actor's. */
                                         iterations?: number;
                                         /** @description The `target_error` this stage ran at. */
                                         targetError?: number;
@@ -1817,27 +2100,27 @@ export interface operations {
                                 id: string;
                                 /**
                                  * Format: uri
-                                 * @description Stable public URL for downloading this artifact. Valid for the full retention window of the job.
+                                 * @description Public download URL, valid for the job's retention window.
                                  */
                                 url: string;
                                 /**
-                                 * @description Machine-readable artifact category. `html_report`: HTML report. `json_report`: JSON results. `csv_report`: flat DPS table (`result.csv`), one row per actor then one row per profileset. `profileset_results`: every profileset in the run (`profilesets.json`), ranked by the sim metric in the same row shape the result summary uses — present whenever a sweep produced results, and the way to read past the summary's top 200. `actor_results`: every actor of a `copy=`/`set=` comparison (`actors.json`), ranked the same way in the same row shape as the summary's `actors` block — present only for those runs, and the way to read past that block's top 200. `input`: the exact SimC input your job ran. `stdout_log` / `stderr_log`: SimC logs; consecutive duplicate lines in `stderr_log` are collapsed with a repeat count. For multistage runs, html and json artifacts repeat once per stage — identify them by `kind` together with `stage`.
+                                 * @description `html_report`: HTML report. `json_report`: JSON results. `csv_report`: DPS table (`result.csv`), one row per actor then one per profileset. `profileset_results`: every profileset (`profilesets.json`), in the summary's row shape; present when a sweep produced results. `actor_results`: every actor of a `copy=`/`set=` comparison (`actors.json`), in the row shape of the summary's `actors`. `input`: the SimC input your job ran. `stdout_log` / `stderr_log`: SimC logs; consecutive duplicate `stderr_log` lines are collapsed with a repeat count. Multistage runs repeat the html and json artifacts once per stage; tell them apart by `stage`.
                                  * @enum {string}
                                  */
                                 kind: "html_report" | "json_report" | "csv_report" | "profileset_results" | "actor_results" | "input" | "stdout_log" | "stderr_log";
                                 /**
-                                 * @description MIME type of the artifact content, drawn from a fixed set: `application/json`, `text/html`, `text/csv`, or `text/plain`.
+                                 * @description MIME type of the artifact.
                                  * @enum {string}
                                  */
                                 mimeType: "application/json" | "text/html" | "text/csv" | "text/plain";
-                                /** @description Stage number for multistage execution artifacts (1-indexed). Null for single-run jobs or artifacts not associated with a specific multistage stage. */
+                                /** @description Stage this artifact belongs to (1-indexed). Null for single-pass jobs and artifacts not tied to a stage. */
                                 stage: number | null;
                             }[];
                         };
                     };
                 };
             };
-            /** @description Your API token is missing, invalid, or not authorized for this request. See `code` for the specific reason. */
+            /** @description Your API key is missing, invalid, or not allowed. See `code`. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1853,7 +2136,7 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -1875,14 +2158,14 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
                     };
                 };
             };
-            /** @description Result not ready. The job has not reached a terminal status yet. */
+            /** @description The job is not terminal yet. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1897,14 +2180,14 @@ export interface operations {
                             status: "pending" | "queued" | "starting" | "running";
                         };
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
                     };
                 };
             };
-            /** @description Result unavailable. The job is terminal but no result payload was produced. */
+            /** @description The job is terminal but produced no result. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -1919,7 +2202,7 @@ export interface operations {
                             status: "completed" | "failed" | "cancelled" | "timed_out";
                         };
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -1942,22 +2225,22 @@ export interface operations {
             /** @description The SimC profile text you submitted with the job. */
             200: {
                 headers: {
-                    /** @description Your in-flight job count at the time of this response. */
+                    /** @description Your jobs in flight. */
                     "X-Active-Jobs": string;
-                    /** @description Your account ceiling for in-flight jobs. */
+                    /** @description Your limit on jobs in flight. */
                     "X-Max-Active-Jobs": string;
-                    /** @description Correlation id for this request, present on every response. The same value is echoed in the `requestId` field of error bodies. */
+                    /** @description Request ID, also in error bodies as `requestId`. */
                     "X-Request-Id": string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        /** @description The exact SimC profile text you submitted with this job. `null` if no profile text is stored for the job. */
+                        /** @description The SimC profile text you submitted. Null if none is stored. */
                         text: string | null;
                     };
                 };
             };
-            /** @description Your API token is missing, invalid, or not authorized for this request. See `code` for the specific reason. */
+            /** @description Your API key is missing, invalid, or not allowed. See `code`. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1973,7 +2256,7 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -1995,7 +2278,7 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -2007,7 +2290,7 @@ export interface operations {
     getJobStatus: {
         parameters: {
             query?: {
-                /** @description Comma-separated list of optional fields to include. Supported: `logEntries` (structured log entries from stdout and stderr for running jobs). */
+                /** @description Comma-separated optional fields to include. Supported: `logEntries`. */
                 include?: string;
             };
             header?: never;
@@ -2021,84 +2304,104 @@ export interface operations {
             /** @description Current status, queue position, and progress for the job. */
             200: {
                 headers: {
-                    /** @description Your in-flight job count at the time of this response. */
+                    /** @description Your jobs in flight. */
                     "X-Active-Jobs": string;
-                    /** @description Your account ceiling for in-flight jobs. */
+                    /** @description Your limit on jobs in flight. */
                     "X-Max-Active-Jobs": string;
-                    /** @description Correlation id for this request, present on every response. The same value is echoed in the `requestId` field of error bodies. */
+                    /** @description Request ID, also in error bodies as `requestId`. */
                     "X-Request-Id": string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
                         /**
-                         * @description Current job status. Terminal values: completed, failed, cancelled, timed_out.
+                         * @description Terminal values: `completed`, `failed`, `cancelled`, `timed_out`.
                          * @enum {string}
                          */
                         status: "pending" | "queued" | "starting" | "running" | "completed" | "failed" | "cancelled" | "timed_out";
                         /**
-                         * @description Machine-readable error code for the terminal state. Null when the job is not terminal or completed successfully.
+                         * @description The priority your job runs at: `requestedPriority`, capped at `plan.maxPriority`, and `standard` when `workload` is `economy`.
+                         * @enum {string}
+                         */
+                        priority: "background" | "standard" | "high";
+                        /**
+                         * @description The priority you asked for, or `plan.defaultPriority` when you set none.
+                         * @enum {string}
+                         */
+                        requestedPriority: "background" | "standard" | "high";
+                        /**
+                         * @description The workload your job runs as. An `interactive` request runs as `economy`, at reduced speed, once your daily full-speed time is used, unless credits keep it at full speed.
+                         * @enum {string}
+                         */
+                        workload: "interactive" | "batch" | "economy";
+                        /**
+                         * @description The workload you asked for. Differs from `workload` when your job was moved to `economy`.
+                         * @enum {string}
+                         */
+                        requestedWorkload: "interactive" | "batch" | "economy";
+                        /**
+                         * @description Why the job ended. Null when the job is not terminal or completed successfully.
                          * @enum {string|null}
                          */
                         errorCode: "execution_interrupted" | "execution_timeout" | "max_credits_reached" | "credits_exhausted" | "execution_failed" | "build_unavailable" | "simulation_error" | "queue_timeout" | "input_invalid" | "insufficient_credits" | "user_cancelled" | "internal" | null;
-                        /** @description Human-readable explanation paired with `errorCode`. Null when the job is not terminal or no additional detail is available. */
+                        /** @description Explanation of `errorCode`. Null when the job is not terminal or there is no detail. */
                         statusReason: string | null;
                         /** @description SimC process exit code. Null when the job is not terminal. */
                         simcExitCode: string | null;
                         queue: {
                             /**
                              * Format: date-time
-                             * @description When this job entered the queue. For a retried job, this reflects the current attempt, not the original submission.
+                             * @description When this job entered the queue. For a retried job, when the current attempt did.
                              */
                             queuedAt: string;
-                            /** @description Estimated seconds until this job begins running. Updated on each poll; not a guarantee. Null when no estimate is available. */
+                            /** @description Estimated seconds until this job starts; not a guarantee. Null when there is no estimate, and always when `workload` is `economy`. */
                             estimatedStartSeconds: number | null;
                             /**
                              * Format: date-time
-                             * @description When the underlying wait-time estimate was last refreshed. Null when no estimate is available.
+                             * @description When the estimate was last refreshed. Null when there is no estimate, and always when `workload` is `economy`.
                              */
                             estimatedStartUpdatedAt: string | null;
                         } | null;
                         progress: {
-                            /** @description Estimated completion percentage (0–100). Null when not yet running. */
+                            /** @description Estimated percent complete (0–100). Null before the job runs. */
                             percent: number | null;
-                            /** @description Stage progress detail while the job is running. Null before the job starts and once it reaches a terminal state. Single-pass jobs report `{ current: 1, total: 1, label: "initial" }`. */
+                            /** @description Null before the job starts and once it is terminal. Single-pass jobs report `{ current: 1, total: 1, label: "initial" }`. */
                             stage: {
                                 /** @description Current stage (1-indexed). */
                                 current: number;
-                                /** @description Total number of stages in this run. */
+                                /** @description Stages in this run. */
                                 total: number;
-                                /** @description Human-readable name of the current stage (for example "initial", "intermediate", "final"). */
+                                /** @description Name of the current stage, for example `initial` or `final`. */
                                 label: string;
-                                /** @description Estimated completion percentage (0–100) within the current stage. */
+                                /** @description Estimated percent complete (0–100) of the current stage. */
                                 percent: number;
                             } | null;
                         };
-                        /** @description Recent log lines from SimC stdout and stderr while the job is running. Full logs are available as artifacts once the job completes. Null when not running or not requested via `include=logEntries`. */
+                        /** @description Recent SimC log lines while the job is running. Null when not running or not requested with `include=logEntries`. Full logs are artifacts once the job ends. */
                         logEntries: {
                             /**
-                             * @description Which stream the line came from. `stderr` carries SimC warnings, errors, and notes; `stdout` carries sim output, progress markers, and results.
+                             * @description `stderr` carries SimC warnings, errors and notes; `stdout` carries sim output and progress.
                              * @enum {string}
                              */
                             source: "stdout" | "stderr";
                             /** @description The log line text. */
                             message: string;
-                            /** @description Epoch milliseconds (UTC) when this line was captured. */
+                            /** @description When the line was captured, in epoch milliseconds. */
                             ts: number;
                         }[] | null;
                         /**
                          * Format: date-time
-                         * @description When this job began executing. Null when the job has not yet started.
+                         * @description When this job started running. Null before it starts.
                          */
                         startedAt: string | null;
                         /** Format: date-time */
                         updatedAt: string | null;
-                        /** @description True if this job was retried automatically because of a platform error. The response reflects the latest retry attempt. */
+                        /** @description True if this job was retried automatically after a platform error. The response reflects the latest attempt. */
                         retried: boolean;
                     };
                 };
             };
-            /** @description Your API token is missing, invalid, or not authorized for this request. See `code` for the specific reason. */
+            /** @description Your API key is missing, invalid, or not allowed. See `code`. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2114,7 +2417,7 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -2136,7 +2439,7 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -2156,7 +2459,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description A stable public URL for downloading the artifact. Valid for the artifact's full retention window. */
+            /** @description Public download URL, valid for the artifact's retention window. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2168,7 +2471,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Your API token is missing, invalid, or not authorized for this request. See `code` for the specific reason. */
+            /** @description Your API key is missing, invalid, or not allowed. See `code`. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2184,7 +2487,7 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -2206,14 +2509,14 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
                     };
                 };
             };
-            /** @description The artifact has expired and is no longer available. */
+            /** @description The artifact has expired. */
             410: {
                 headers: {
                     [name: string]: unknown;
@@ -2228,7 +2531,7 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -2248,7 +2551,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Cancel accepted. `status` is `cancelled` when the job ended before running, or `cancel_requested` when the job was already running and has been signaled to stop. */
+            /** @description `status` is `cancelled` when the job had not started, or `cancel_requested` when it was running and has been signaled to stop. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2259,7 +2562,7 @@ export interface operations {
                         success: true;
                         id: string;
                         /**
-                         * @description The job ended before it started running and is fully cancelled.
+                         * @description The job ended before it started running.
                          * @enum {string}
                          */
                         status: "cancelled";
@@ -2268,7 +2571,7 @@ export interface operations {
                         success: true;
                         id: string;
                         /**
-                         * @description The job was already running and has been signaled to stop. Poll `GET /v1/simc/jobs/{id}` to observe the transition to `cancelled`.
+                         * @description The job was running and has been signaled to stop. Poll `GET /v1/simc/jobs/{id}` until it is `cancelled`.
                          * @enum {string}
                          */
                         status: "cancel_requested";
@@ -2280,7 +2583,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Your API token is missing, invalid, or not authorized for this request. See `code` for the specific reason. */
+            /** @description Your API key is missing, invalid, or not allowed. See `code`. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2296,7 +2599,7 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -2318,7 +2621,7 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -2357,11 +2660,11 @@ export interface operations {
             /** @description Your usage summary. */
             200: {
                 headers: {
-                    /** @description Your in-flight job count at the time of this response. */
+                    /** @description Your jobs in flight. */
                     "X-Active-Jobs": string;
-                    /** @description Your account ceiling for in-flight jobs. */
+                    /** @description Your limit on jobs in flight. */
                     "X-Max-Active-Jobs": string;
-                    /** @description Correlation id for this request, present on every response. The same value is echoed in the `requestId` field of error bodies. */
+                    /** @description Request ID, also in error bodies as `requestId`. */
                     "X-Request-Id": string;
                     [name: string]: unknown;
                 };
@@ -2380,11 +2683,11 @@ export interface operations {
                             end: string | null;
                             /** @description Completed sims in the current period. */
                             simsRun: number;
-                            /** @description Average runtime in seconds for completed sims in the current period. */
+                            /** @description Average runtime of completed sims in the current period, in seconds. */
                             avgRuntimeSeconds: number | null;
-                            /** @description API read requests consumed in the current period. */
+                            /** @description Read requests used in the current period. */
                             readsUsed: number | null;
-                            /** @description Maximum read requests allowed in the current period. Null means no cap. */
+                            /** @description Read requests allowed in the current period. Null means no cap. */
                             readsLimit: number | null;
                             /**
                              * Format: date-time
@@ -2392,95 +2695,139 @@ export interface operations {
                              */
                             readsCapResetAt: string | null;
                         };
+                        /** @description Your daily full-speed time. Null when you have no daily budget. */
+                        budget: {
+                            /**
+                             * Format: date-time
+                             * @description When your daily full-speed time resets. Nothing carries over.
+                             */
+                            resetAt: string;
+                            /** @description Full-speed sim time used since the last reset, in seconds. Can exceed `plan.interactiveSecondsPerDay`: a job that starts at full speed finishes at full speed. */
+                            usedSeconds: number;
+                            /** @description Full-speed sim time left until `resetAt`, in seconds. While it is above 0, an `interactive` job runs at full speed. */
+                            remainingSeconds: number;
+                            /** @description `usedSeconds` in credits. Not taken from your credit balance. */
+                            usedCredits: number;
+                            /** @description `remainingSeconds` in credits. */
+                            remainingCredits: number;
+                        } | null;
                         snapshot: {
-                            /** @description Number of jobs currently in flight. The ceiling is `plan.maxActiveJobs`. */
+                            /** @description Jobs in flight. The limit is `plan.maxActiveJobs`. */
                             activeJobs: number | null;
-                            /** @description Number of jobs currently queued. */
+                            /** @description Jobs queued. */
                             queuedJobs: number | null;
-                            /** @description Number of jobs currently running or starting. */
+                            /** @description Jobs running or starting. */
                             runningJobs: number | null;
                         };
-                        /** @description The terms your account runs under: metering rate, runtime and queue ceilings, concurrency and variant caps, and priority fees. */
+                        /** @description Your limits and rates. */
                         plan: {
                             /** @description Maximum jobs your account can have in flight. */
                             maxActiveJobs: number | null;
-                            /** @description Per-job credit ceiling: the largest spend cap (`runtime.maxCredits`) a submission may request, and the most a submission without one can spend. */
+                            /** @description Most credits one job can use, and the largest `runtime.maxCredits` you can set. */
                             maxCreditsPerJob: number | null;
-                            /** @description The same per-job ceiling as `maxCreditsPerJob`, kept for compatibility. */
+                            /** @description Same as `maxCreditsPerJob`, kept for compatibility. */
                             defaultCreditsPerJob: number | null;
                             /**
                              * @deprecated
-                             * @description Deprecated: use `maxCreditsPerJob`. The same ceiling expressed in seconds at the basis rate of 32 credits per second.
+                             * @description Deprecated: use `maxCreditsPerJob`.
                              */
                             maxRuntimeSeconds: number | null;
                             /**
                              * @deprecated
-                             * @description Deprecated: `defaultCreditsPerJob` expressed in seconds at the basis rate of 32 credits per second.
+                             * @description Deprecated: use `defaultCreditsPerJob`.
                              */
                             defaultRuntimeSeconds: number | null;
-                            /** @description Maximum time in seconds a job may wait in the queue before being cancelled. */
+                            /** @description Longest a job may wait in the queue, in seconds. */
                             maxQueueSeconds: number | null;
-                            /** @description Default queue wait per job in seconds. */
+                            /** @description Default queue wait per job, in seconds. */
                             defaultQueueSeconds: number | null;
-                            /** @description Metering rate for your jobs, in credits per second of SimC runtime. Usage accrues at this rate while a sim runs, so a spend cap of `runtime.maxCredits` buys about `maxCredits / creditsPerSecond` seconds. The rate applied to a finished run is reported on the job as `runtime.creditsPerSecond`. */
+                            /** @description Credits per second of SimC run time on your jobs. A finished job reports the rate it ran at as `runtime.creditsPerSecond`. */
                             creditsPerSecond: number;
-                            /** @description vCPUs allocated to each job. Determines how fast a sim completes; billing uses `creditsPerSecond`. */
+                            /** @description vCPUs each job runs on. */
                             vcpuPerJob: number;
-                            /** @description Maximum simc variants (profilesets, copies, sets) allowed per job. Null means no cap. */
+                            /** @description Most variants (profilesets, copies, sets) per job. Null means no cap. */
                             maxSimcVariants: number | null;
+                            /** @description Your daily full-speed time, in seconds of sim time. Once it is used, `interactive` jobs run as `economy` unless credits keep them at full speed. Null means no daily budget. */
+                            interactiveSecondsPerDay: number | null;
+                            /** @description Largest sim you can submit, as profiles × iterations per profile (a job's `runtime.iterations`). Larger submissions are rejected with `iterations_exceeds_policy`. Null means no cap. */
+                            maxIterationsPerJob: number | null;
+                            /**
+                             * @description The priority a job runs at when you set none.
+                             * @enum {string}
+                             */
+                            defaultPriority: "standard" | "high";
+                            /**
+                             * @description The highest priority your jobs run at. A job that asks for more runs at this one.
+                             * @enum {string}
+                             */
+                            maxPriority: "standard" | "high";
                             /**
                              * @deprecated
-                             * @description Deprecated: the compute pool no longer distinguishes plans, so don't branch on it.
+                             * @description Deprecated: no longer varies, so don't branch on it.
                              * @enum {string}
                              */
                             pool: "standard" | "warm" | "dedicated";
-                            /** @description Workloads a job may request with `workload` on `POST /v1/simc/jobs`, default first. Most plans list `interactive` only. */
-                            workloads: ("interactive" | "batch")[];
-                            /** @description Per-job priority fee in credits, by priority. Added to the base compute cost for jobs submitted at `high` only when it would buy a faster start. */
+                            /** @description Workloads you can request with `workload`, default first. */
+                            workloads: ("interactive" | "batch" | "economy")[];
+                            /** @description Per-job fee in credits, by priority. A `high` job pays it only when it buys a faster start. */
                             priorityFeeCredits: {
                                 high?: number;
                             };
                         };
                         /**
                          * @deprecated
-                         * @description Deprecated alias of `plan` with identical contents.
+                         * @description Deprecated: use `plan`.
                          */
                         limits: {
                             /** @description Maximum jobs your account can have in flight. */
                             maxActiveJobs: number | null;
-                            /** @description Per-job credit ceiling: the largest spend cap (`runtime.maxCredits`) a submission may request, and the most a submission without one can spend. */
+                            /** @description Most credits one job can use, and the largest `runtime.maxCredits` you can set. */
                             maxCreditsPerJob: number | null;
-                            /** @description The same per-job ceiling as `maxCreditsPerJob`, kept for compatibility. */
+                            /** @description Same as `maxCreditsPerJob`, kept for compatibility. */
                             defaultCreditsPerJob: number | null;
                             /**
                              * @deprecated
-                             * @description Deprecated: use `maxCreditsPerJob`. The same ceiling expressed in seconds at the basis rate of 32 credits per second.
+                             * @description Deprecated: use `maxCreditsPerJob`.
                              */
                             maxRuntimeSeconds: number | null;
                             /**
                              * @deprecated
-                             * @description Deprecated: `defaultCreditsPerJob` expressed in seconds at the basis rate of 32 credits per second.
+                             * @description Deprecated: use `defaultCreditsPerJob`.
                              */
                             defaultRuntimeSeconds: number | null;
-                            /** @description Maximum time in seconds a job may wait in the queue before being cancelled. */
+                            /** @description Longest a job may wait in the queue, in seconds. */
                             maxQueueSeconds: number | null;
-                            /** @description Default queue wait per job in seconds. */
+                            /** @description Default queue wait per job, in seconds. */
                             defaultQueueSeconds: number | null;
-                            /** @description Metering rate for your jobs, in credits per second of SimC runtime. Usage accrues at this rate while a sim runs, so a spend cap of `runtime.maxCredits` buys about `maxCredits / creditsPerSecond` seconds. The rate applied to a finished run is reported on the job as `runtime.creditsPerSecond`. */
+                            /** @description Credits per second of SimC run time on your jobs. A finished job reports the rate it ran at as `runtime.creditsPerSecond`. */
                             creditsPerSecond: number;
-                            /** @description vCPUs allocated to each job. Determines how fast a sim completes; billing uses `creditsPerSecond`. */
+                            /** @description vCPUs each job runs on. */
                             vcpuPerJob: number;
-                            /** @description Maximum simc variants (profilesets, copies, sets) allowed per job. Null means no cap. */
+                            /** @description Most variants (profilesets, copies, sets) per job. Null means no cap. */
                             maxSimcVariants: number | null;
+                            /** @description Your daily full-speed time, in seconds of sim time. Once it is used, `interactive` jobs run as `economy` unless credits keep them at full speed. Null means no daily budget. */
+                            interactiveSecondsPerDay: number | null;
+                            /** @description Largest sim you can submit, as profiles × iterations per profile (a job's `runtime.iterations`). Larger submissions are rejected with `iterations_exceeds_policy`. Null means no cap. */
+                            maxIterationsPerJob: number | null;
+                            /**
+                             * @description The priority a job runs at when you set none.
+                             * @enum {string}
+                             */
+                            defaultPriority: "standard" | "high";
+                            /**
+                             * @description The highest priority your jobs run at. A job that asks for more runs at this one.
+                             * @enum {string}
+                             */
+                            maxPriority: "standard" | "high";
                             /**
                              * @deprecated
-                             * @description Deprecated: the compute pool no longer distinguishes plans, so don't branch on it.
+                             * @description Deprecated: no longer varies, so don't branch on it.
                              * @enum {string}
                              */
                             pool: "standard" | "warm" | "dedicated";
-                            /** @description Workloads a job may request with `workload` on `POST /v1/simc/jobs`, default first. Most plans list `interactive` only. */
-                            workloads: ("interactive" | "batch")[];
-                            /** @description Per-job priority fee in credits, by priority. Added to the base compute cost for jobs submitted at `high` only when it would buy a faster start. */
+                            /** @description Workloads you can request with `workload`, default first. */
+                            workloads: ("interactive" | "batch" | "economy")[];
+                            /** @description Per-job fee in credits, by priority. A `high` job pays it only when it buys a faster start. */
                             priorityFeeCredits: {
                                 high?: number;
                             };
@@ -2488,7 +2835,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Your API token is missing, invalid, or not authorized for this request. See `code` for the specific reason. */
+            /** @description Your API key is missing, invalid, or not allowed. See `code`. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2504,7 +2851,7 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
@@ -2525,17 +2872,17 @@ export interface operations {
             /** @description Your credit balance and active grants. */
             200: {
                 headers: {
-                    /** @description Correlation id for this request, present on every response. The same value is echoed in the `requestId` field of error bodies. */
+                    /** @description Request ID, also in error bodies as `requestId`. */
                     "X-Request-Id": string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        /** @description Total purchased credit balance. Purchased credits do not expire. */
+                        /** @description Purchased credits. They do not expire. */
                         purchased: number;
-                        /** @description Credits currently held against your in-flight jobs, excluded from `purchased` and `grants[].remaining`. Any unused amount returns to them on settlement. */
+                        /** @description Credits held for in-flight jobs, excluded from `purchased` and `grants[].remaining`. */
                         reserved: number;
-                        /** @description Your active grants, ordered by expiry (soonest first; grants without expiry last). Empty when no grants are active. */
+                        /** @description Active grants, soonest expiry first. Empty when there are none. */
                         grants: {
                             id: string;
                             /**
@@ -2543,20 +2890,20 @@ export interface operations {
                              * @enum {string}
                              */
                             reason: "grant_sandbox_allowance" | "grant_developer_allowance" | "grant_beta" | "grant_promo" | "grant_onboarding" | "grant_sandbox_restricted_onboarding" | "grant_personal_allowance" | "grant_personal_plus_allowance" | "onboarding" | "allowance" | "promo";
-                            /** @description Credits currently available in this grant. Excludes any credits already committed to in-flight jobs. */
+                            /** @description Credits left in this grant. */
                             remaining: number;
                             /** @description Credits originally issued in this grant. */
                             original: number;
                             /**
                              * Format: date-time
-                             * @description When this grant expires. `null` means the grant has no expiry. After expiry, any remaining credits in the grant are forfeited and the grant no longer appears in this response.
+                             * @description When this grant expires and its unused credits are lost. Null means no expiry.
                              */
                             expiresAt: string | null;
                         }[];
                     };
                 };
             };
-            /** @description Your API token is missing, invalid, or not authorized for this request. See `code` for the specific reason. */
+            /** @description Your API key is missing, invalid, or not allowed. See `code`. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2572,10 +2919,2046 @@ export interface operations {
                             }[] | null;
                         } | null;
                         /**
-                         * @description Correlation id for this request, also returned in the `X-Request-Id` response header.
+                         * @description Request ID, also sent as the `X-Request-Id` header.
                          * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
                          */
                         requestId?: string;
+                    };
+                };
+            };
+        };
+    };
+    simcForeverListJobs: {
+        parameters: {
+            query?: {
+                /** @description Jobs to return. Defaults to 25, maximum 100. */
+                limit?: number;
+                /** @description `page.nextCursor` from a previous response. */
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Your recent SimC Forever jobs, newest first. */
+            200: {
+                headers: {
+                    /** @description Your jobs in flight. */
+                    "X-Active-Jobs": string;
+                    /** @description Your limit on jobs in flight. */
+                    "X-Max-Active-Jobs": string;
+                    /** @description Request ID, also in error bodies as `requestId`. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        jobs: {
+                            id: string;
+                            /** @enum {string} */
+                            status: "pending" | "queued" | "starting" | "running" | "completed" | "failed" | "cancelled" | "timed_out";
+                            /** Format: date-time */
+                            createdAt: string | null;
+                            /** Format: date-time */
+                            completedAt: string | null;
+                            /** @enum {string|null} */
+                            errorCode: "execution_interrupted" | "execution_timeout" | "max_credits_reached" | "credits_exhausted" | "execution_failed" | "build_unavailable" | "simulation_error" | "queue_timeout" | "input_invalid" | "insufficient_credits" | "user_cancelled" | "internal" | null;
+                            /** @description Your metadata, exactly as submitted. */
+                            metadata: {
+                                [key: string]: unknown;
+                            } | null;
+                            /** @description Build ID. `GET /v1/simc-forever/builds/{id}` returns the build. */
+                            buildId: string | null;
+                            links: components["schemas"]["SimcForeverJobLinks"];
+                        }[];
+                        page: {
+                            limit: number;
+                            hasMore: boolean;
+                            nextCursor: string | null;
+                            /**
+                             * Format: date-time
+                             * @description Jobs before this time are not returned.
+                             */
+                            since: string;
+                        };
+                    };
+                };
+            };
+            /** @description Invalid cursor or query parameter. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        code: string;
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description Your API key is missing, invalid, or not allowed. See `code`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @enum {string} */
+                        code: "missing_token" | "invalid_token" | "revoked_token" | "expired_token";
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+        };
+    };
+    simcForeverCreateJob: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Key (≤255 printable-ASCII chars) for safe retries. The same key with the same payload returns the original job; with a different payload, 409. `metadata` is not compared. Keys are scoped to the client your API key is attached to, and do not expire. */
+                "idempotency-key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    build: {
+                        /**
+                         * @description SimC build channel to run.
+                         * @enum {string}
+                         */
+                        channel: "nightly" | "weekly" | "latest";
+                        /**
+                         * @description SimC git branch, overriding the channel's default.
+                         * @enum {string}
+                         */
+                        gitBranch?: "main";
+                        /**
+                         * Format: uuid
+                         * @description Pin this job to a build ID, from `build.id` on a job response or `GET /v1/simc-forever/builds`. The build must be from the last 30 days and on the requested branch; if it is unavailable when the job runs, the job falls back to `channel`.
+                         */
+                        id?: string;
+                    };
+                    profile: {
+                        /** @description SimC profile text, as you would run it locally. Maximum 5 MB (UTF-8). */
+                        text: string;
+                    };
+                    /**
+                     * @description Execution options. Multistage is skipped if your input has directives it does not support.
+                     * @example {
+                     *       "multiStage": true
+                     *     }
+                     */
+                    runtime?: {
+                        /** @description Run the sim in stages, culling profilesets between them. Defaults to a single pass. */
+                        multiStage?: boolean;
+                        /** @description Spend cap for this job, in credits. A job that reaches it is stopped with `errorCode` `max_credits_reached` and billed the cap. The maximum is `plan.maxCreditsPerJob` on `GET /v1/simc/usage`. */
+                        maxCredits?: number;
+                        /** @description Seconds this job may wait in the queue before it is cancelled. Defaults to `plan.defaultQueueSeconds`, up to `plan.maxQueueSeconds`, on `GET /v1/simc/usage`. `economy` jobs get a longer default and maximum. The response returns the value applied as `runtime.ceiling.queueSeconds`. */
+                        maxQueueSeconds?: number;
+                    };
+                    /**
+                     * @description Higher priority runs first; equal priorities run in submission order. Defaults to `plan.defaultPriority` and is capped at `plan.maxPriority`, both on `GET /v1/simc/usage`. `high` adds a per-job fee only when it buys a faster start, reported in `runtime.priorityFeeCredits`.
+                     * @enum {string}
+                     */
+                    priority?: "background" | "standard" | "high";
+                    /**
+                     * @description `interactive` (default): starts as soon as capacity allows, for sims someone is waiting on. `batch`: bulk work that may queue for hours; set `runtime.maxQueueSeconds` to cover the wait. `economy`: runs at reduced speed and uses none of your daily full-speed time. Only the workloads in `plan.workloads` on `GET /v1/simc/usage` are accepted.
+                     * @default interactive
+                     * @enum {string}
+                     */
+                    workload?: "interactive" | "batch" | "economy";
+                    /**
+                     * @description Your own labels, returned unchanged (for example `profileSource`, `characterRef`).
+                     * @example {
+                     *       "requestId": "req_12345",
+                     *       "profileSource": "addon-export",
+                     *       "characterRef": "us-illidan-niike"
+                     *     }
+                     */
+                    metadata?: {
+                        [key: string]: string;
+                    };
+                    /** @description Webhook subscription for this job. The URL and signing secret come from your webhook configuration. */
+                    webhook?: {
+                        /**
+                         * @description Events to subscribe this job to.
+                         * @example [
+                         *       "job.terminal"
+                         *     ]
+                         */
+                        events: "job.terminal"[];
+                    };
+                    /**
+                     * @description Output formats to produce. Logs, the input and a JSON report are always produced. For multistage runs, HTML covers only the final stage.
+                     * @example {
+                     *       "html": true,
+                     *       "csv": true,
+                     *       "json": {
+                     *         "version": "2"
+                     *       }
+                     *     }
+                     */
+                    artifacts?: {
+                        /** @description Generate an HTML report. Defaults to `false`. */
+                        html?: boolean;
+                        /** @description Generate a CSV table (`result.csv`): one row per actor, then one per profileset. Defaults to `false`. */
+                        csv?: boolean;
+                        /** @description JSON report options. A JSON report is always generated. */
+                        json?: {
+                            /**
+                             * @description JSON report schema: `2` (default) is stable v2.0.0, `3` is v3.0.0-alpha1 (experimental).
+                             * @enum {string}
+                             */
+                            version?: "2" | "3";
+                        };
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Sim accepted and queued. */
+            200: {
+                headers: {
+                    /** @description Your jobs in flight. */
+                    "X-Active-Jobs": string;
+                    /** @description Your limit on jobs in flight. */
+                    "X-Max-Active-Jobs": string;
+                    /** @description Submissions you can make per minute. */
+                    "X-RateLimit-Limit": string;
+                    /** @description Submissions left in the current minute. */
+                    "X-RateLimit-Remaining": string;
+                    /** @description When your submissions refill, in Unix epoch seconds. */
+                    "X-RateLimit-Reset": string;
+                    /** @description Request ID, also in error bodies as `requestId`. */
+                    "X-Request-Id": string;
+                    /** @description `true` when the response replays an earlier submission with the same `idempotency-key`. Absent otherwise. */
+                    "X-Idempotent-Replay"?: "true";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        id: string;
+                        /**
+                         * @description The priority your job runs at: `requestedPriority`, capped at `plan.maxPriority`, and `standard` when `workload` is `economy`.
+                         * @enum {string}
+                         */
+                        priority: "background" | "standard" | "high";
+                        /**
+                         * @description The priority you asked for, or `plan.defaultPriority` when you set none.
+                         * @enum {string}
+                         */
+                        requestedPriority: "background" | "standard" | "high";
+                        /**
+                         * @description The workload your job runs as. An `interactive` request runs as `economy`, at reduced speed, once your daily full-speed time is used, unless credits keep it at full speed.
+                         * @enum {string}
+                         */
+                        workload: "interactive" | "batch" | "economy";
+                        /**
+                         * @description The workload you asked for. Differs from `workload` when your job was moved to `economy`.
+                         * @enum {string}
+                         */
+                        requestedWorkload: "interactive" | "batch" | "economy";
+                        runtime: {
+                            ceiling: {
+                                /** @description Credits at which this job is stopped with `errorCode` `max_credits_reached`: your `runtime.maxCredits`, or `plan.maxCreditsPerJob` when you set none. */
+                                maxCredits: number | null;
+                                /** @description Seconds this job may wait in the queue before it is cancelled with `errorCode` `queue_timeout`. */
+                                queueSeconds: number | null;
+                            };
+                            /** @description Priority fee in credits. `0` when no fee applied. */
+                            priorityFeeCredits?: number;
+                            /** @description Variants your sim runs: its profilesets, `copy=` and `set=` actors, or 1 when it has none. Null when not recorded. */
+                            variants: number | null;
+                            /** @description Your sim's size, checked against `plan.maxIterationsPerJob`: `variants`, plus your base profile when it has profilesets, `copy=` or `set=` actors, times the iterations each is counted at. That is your input's `iterations=`, at most 1,000,000; without it, by the `target_error` your sim runs at, yours or SimC's default: 100,000 below 0.1, 25,000 from 0.1 to 0.2, 5,000 above 0.2. Multistage sims count 5,000. Null when not recorded. */
+                            iterations: number | null;
+                        };
+                        links: components["schemas"]["SimcForeverJobLinks"];
+                        /** @description Warnings about your input; the job still runs, using each warning's `applied` value. Omitted when there are none. Lists the first 16 in line order; `warningsCount` has the total. */
+                        warnings?: {
+                            /**
+                             * @description `iterations_clamped`: `iterations=` was above the cap. `target_error_floored`: `target_error=` was below the floor. `iterations_ignored_by_multistage`: your sim's multistage stages don't use `iterations=`.
+                             * @enum {string}
+                             */
+                            kind: "iterations_clamped" | "target_error_floored" | "iterations_ignored_by_multistage";
+                            /** @description 1-indexed line number in your input. */
+                            line: number;
+                            /** @description The value as written in your input. */
+                            requested: number;
+                            /** @description The value the sim runs with. For `iterations_ignored_by_multistage`, the most iterations a stage runs per profile. */
+                            applied: number;
+                            /** @description Explanation of the warning. */
+                            message: string;
+                        }[];
+                        /** @description Total warnings about your input. Omitted when there are none. */
+                        warningsCount?: number;
+                    };
+                };
+            };
+            /** @description Your request failed validation. See `error`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        code: string;
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description Your API key is missing, invalid, or not allowed. See `code`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @enum {string} */
+                        code: "missing_token" | "invalid_token" | "revoked_token" | "expired_token";
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description Your account is inactive or has too few credits for this job. See `code` and `meta`. */
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        code: string;
+                        meta: {
+                            reason: string;
+                            /** @description The credit ceiling the submission would have run under. */
+                            ceilingMaxCredits?: number;
+                            /** @description Largest `runtime.maxCredits` your credits cover, after any priority fee. */
+                            maxAffordableCredits?: number;
+                            /**
+                             * Format: uri
+                             * @description Link to the documentation for this rejection.
+                             */
+                            docsUrl?: string;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description The `idempotency-key` was already used with a different payload. `meta.originalJobId` is the job that used it. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @enum {string} */
+                        code: "idempotency_key_reuse";
+                        meta: {
+                            /** @enum {string} */
+                            reason: "idempotency_key_reuse";
+                            /** @description The job that used this idempotency key. */
+                            originalJobId: string;
+                            /** Format: uri */
+                            docsUrl?: string;
+                        };
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description Your request body exceeds the 6 MB maximum. A profile over 5 MB returns code `profile_too_large` instead. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        code: string;
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description Your input was rejected. `code`: `input_sanitized_rejected` (directives Simmit does not allow), `too_many_variants` (over your variant limit), `iterations_exceeds_policy` (over `plan.maxIterationsPerJob`), `build_pin_not_allowed` (your plan has no build pinning), `build_pin_unavailable` (the pinned `build.id` cannot be used), `workload_not_allowed` (your plan does not include the `workload`). `meta.message` explains. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @enum {string} */
+                        code: "input_sanitized_rejected" | "too_many_variants" | "iterations_exceeds_policy" | "build_pin_not_allowed" | "build_pin_unavailable" | "workload_not_allowed";
+                        meta: {
+                            /** @enum {string} */
+                            reason: "input_sanitized_rejected" | "too_many_variants" | "iterations_exceeds_policy" | "build_pin_not_allowed" | "build_pin_unavailable" | "workload_not_allowed";
+                            /** @description Why the input was rejected. */
+                            message: string;
+                            /**
+                             * Format: uri
+                             * @description Link to the documentation for this rejection.
+                             */
+                            docsUrl: string;
+                            /** @description A sample of rejected lines; `blockedCount` has the total. */
+                            blocked: {
+                                line: number;
+                                text: string;
+                                /** @description The directive the line matched, such as `output` or `save_*`, or `bare_input_token` for a word without `=`. */
+                                directive: string;
+                                /** @description Why the line was rejected. */
+                                message: string;
+                            }[];
+                            /** @description Rejected lines in total. */
+                            blockedCount: number;
+                            /** @description `true` when more lines were rejected than included in `blocked`. */
+                            blockedTruncated: boolean;
+                            /** @description Variants your input expands to: its `profileset`, `copy` and `set` directives. */
+                            totalVariants?: number;
+                            /** @description Maximum simulated variants per sim for your account. */
+                            maxVariants?: number;
+                            /** @description Your sim's size, the number checked against `maxIterationsPerJob`. Counted as `runtime.iterations` is. */
+                            iterations?: number;
+                            /** @description Variants your sim runs: its profilesets, `copy=` and `set=` actors, or 1 when it has none. */
+                            variants?: number;
+                            /** @description Iterations each profile is counted at, as described on `runtime.iterations`. */
+                            iterationsPerVariant?: number;
+                            /** @description `plan.maxIterationsPerJob` on `GET /v1/simc/usage`. */
+                            maxIterationsPerJob?: number;
+                            /**
+                             * Format: uri
+                             * @description Link to your account page, where an upgrade can be requested.
+                             */
+                            upgradeUrl?: string;
+                            /**
+                             * Format: uuid
+                             * @description The rejected `build.id`.
+                             */
+                            buildId?: string;
+                            /** @description Maximum age of a pinnable build, in days. */
+                            maxPinAgeDays?: number;
+                            /**
+                             * @description The rejected `workload`.
+                             * @enum {string}
+                             */
+                            workload?: "interactive" | "batch" | "economy";
+                            /** @description Workloads your account accepts, default first. */
+                            allowedWorkloads?: ("interactive" | "batch" | "economy")[];
+                        };
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description You are over your request rate or in-flight job limit; see `code`. `Retry-After` says when to retry. */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before retrying. */
+                    "Retry-After": string;
+                    /** @description Your jobs in flight. */
+                    "X-Active-Jobs"?: string;
+                    /** @description Your limit on jobs in flight. */
+                    "X-Max-Active-Jobs"?: string;
+                    /** @description Submissions you can make per minute. */
+                    "X-RateLimit-Limit"?: string;
+                    /** @description Submissions left in the current minute. */
+                    "X-RateLimit-Remaining"?: string;
+                    /** @description When your submissions refill, in Unix epoch seconds. */
+                    "X-RateLimit-Reset"?: string;
+                    /** @description Request ID, also in error bodies as `requestId`. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @enum {string} */
+                        code: "rate_limit_exceeded";
+                        meta: {
+                            /** @enum {string} */
+                            scope: "developer";
+                        };
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    } | {
+                        error: string;
+                        /** @enum {string} */
+                        code: "max_active_jobs_exceeded";
+                        meta: {
+                            /** @enum {string} */
+                            reason: "max_active_jobs_exceeded";
+                            /** @description Most jobs your account can have in flight. */
+                            maxActiveJobs: number;
+                            /** @description Jobs your account had in flight when this request was rejected. */
+                            activeJobs: number;
+                        };
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description Your sim was not accepted right now. `code`: `queue_unavailable` (queue full or paused), `queue_health_unknown` (queue health cannot be confirmed), `api_maintenance` (planned maintenance). `Retry-After` says when to retry. */
+            503: {
+                headers: {
+                    /** @description Seconds to wait before retrying. */
+                    "Retry-After": string;
+                    /** @description Request ID, also in error bodies as `requestId`. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @enum {string} */
+                        code: "queue_unavailable";
+                        meta: {
+                            /** @enum {string} */
+                            reason: "queue_unavailable";
+                            /** @description Reason the queue is currently rejecting submissions. */
+                            queueHealth: string;
+                        };
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    } | {
+                        error: string;
+                        /** @enum {string} */
+                        code: "queue_health_unknown";
+                        meta: {
+                            /** @enum {string} */
+                            reason: "queue_health_unknown";
+                            laneId: string;
+                        };
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    } | {
+                        error: string;
+                        /** @enum {string} */
+                        code: "secret_store_unavailable";
+                        meta: {
+                            /** @enum {string} */
+                            reason: "secret_store_unavailable";
+                        };
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    } | {
+                        error: string;
+                        /** @enum {string} */
+                        code: "api_maintenance";
+                        meta: {
+                            /** @description Seconds to wait before retrying. */
+                            retryAfterSeconds: number;
+                        };
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+        };
+    };
+    simcForeverCheckProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    profile: {
+                        /** @description SimC profile text to check. Maximum 5 MB (UTF-8). */
+                        text: string;
+                    };
+                    runtime?: {
+                        /** @description Whether your submission will set `runtime.multiStage`; the profile is sized and warned to match. */
+                        multiStage?: boolean;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Your profile passes the checks a submission applies to it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        /** @description Warnings about your input; a sim submitted with it uses each warning's `applied` value. Omitted when there are none. Lists the first 16 in line order; `warningsCount` has the total. */
+                        warnings?: {
+                            /**
+                             * @description `iterations_clamped`: `iterations=` was above the cap. `target_error_floored`: `target_error=` was below the floor. `iterations_ignored_by_multistage`: your sim's multistage stages don't use `iterations=`.
+                             * @enum {string}
+                             */
+                            kind: "iterations_clamped" | "target_error_floored" | "iterations_ignored_by_multistage";
+                            /** @description 1-indexed line number in your input. */
+                            line: number;
+                            /** @description The value as written in your input. */
+                            requested: number;
+                            /** @description The value the sim runs with. For `iterations_ignored_by_multistage`, the most iterations a stage runs per profile. */
+                            applied: number;
+                            /** @description Explanation of the warning. */
+                            message: string;
+                        }[];
+                        /** @description Total warnings about your input. Omitted when there are none. */
+                        warningsCount?: number;
+                    };
+                };
+            };
+            /** @description Your request failed validation. See `error`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        code: string;
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description Your API key is missing, invalid, or not allowed. See `code`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @enum {string} */
+                        code: "missing_token" | "invalid_token" | "revoked_token" | "expired_token";
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description Your request body exceeds the 6 MB maximum. A profile over 5 MB returns code `profile_too_large` instead. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        code: string;
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description Your profile would be rejected if submitted. `code`: `input_sanitized_rejected` (directives Simmit does not allow), `too_many_variants` (over your variant limit), `iterations_exceeds_policy` (over `plan.maxIterationsPerJob`). `meta.message` explains. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @enum {string} */
+                        code: "input_sanitized_rejected" | "too_many_variants" | "iterations_exceeds_policy";
+                        meta: {
+                            /** @enum {string} */
+                            reason: "input_sanitized_rejected" | "too_many_variants" | "iterations_exceeds_policy";
+                            /** @description Why the input was rejected. */
+                            message: string;
+                            /**
+                             * Format: uri
+                             * @description Link to the documentation for this rejection.
+                             */
+                            docsUrl?: string;
+                            /** @description A sample of rejected lines; `blockedCount` has the total. */
+                            blocked?: {
+                                line: number;
+                                text: string;
+                                /** @description The directive the line matched, such as `output` or `save_*`, or `bare_input_token` for a word without `=`. */
+                                directive: string;
+                                /** @description Why the line was rejected. */
+                                message: string;
+                            }[];
+                            /** @description Rejected lines in total. */
+                            blockedCount?: number;
+                            /** @description `true` when more lines were rejected than included in `blocked`. */
+                            blockedTruncated?: boolean;
+                            /** @description Variants your input expands to: its `profileset`, `copy` and `set` directives. */
+                            totalVariants?: number;
+                            /** @description Maximum simulated variants per sim for your account. */
+                            maxVariants?: number;
+                            /** @description Your sim's size, the number checked against `maxIterationsPerJob`. Counted as `runtime.iterations` is. */
+                            iterations?: number;
+                            /** @description Variants your sim runs: its profilesets, `copy=` and `set=` actors, or 1 when it has none. */
+                            variants?: number;
+                            /** @description Iterations each profile is counted at, as described on `runtime.iterations`. */
+                            iterationsPerVariant?: number;
+                            /** @description `plan.maxIterationsPerJob` on `GET /v1/simc/usage`. */
+                            maxIterationsPerJob?: number;
+                            /**
+                             * Format: uri
+                             * @description Link to your account page, where an upgrade can be requested.
+                             */
+                            upgradeUrl?: string;
+                        };
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description You are over your request rate. `Retry-After` says when to retry. */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before retrying. */
+                    "Retry-After": string;
+                    /** @description Request ID, also in error bodies as `requestId`. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @enum {string} */
+                        code: "rate_limit_exceeded";
+                        meta: {
+                            /** @enum {string} */
+                            scope: "developer";
+                        };
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+        };
+    };
+    simcForeverListBuilds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Available SimC Forever builds, grouped by channel. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: date-time */
+                        generatedAt: string;
+                        builds: {
+                            /** @enum {string} */
+                            channel: "nightly" | "weekly" | "latest";
+                            /** @description Git branch this build was produced from. */
+                            gitBranch: string;
+                            /** @description Source repository for this SimC build. */
+                            repo: string;
+                            /** @description Git commit of the SimC source for this build. */
+                            commit: string;
+                            /** @description SimC version (e.g. `1205-01`). Null when not recorded. */
+                            simcVersion: string | null;
+                            /** @description Live and PTR WoW versions this build simulates. Null when not recorded. */
+                            gameData: {
+                                live: {
+                                    /** @description Live WoW game version (e.g. `12.0.7.68453`). */
+                                    version: string;
+                                    /** @description Hotfix date of the live game data (`YYYY-MM-DD`). */
+                                    hotfixDate: string;
+                                };
+                                /** @description Null if this build has no PTR data. */
+                                ptr: {
+                                    /** @description PTR WoW game version (e.g. `12.1.0.68569`). */
+                                    version: string;
+                                    /** @description Hotfix date of the PTR game data (`YYYY-MM-DD`). */
+                                    hotfixDate: string;
+                                } | null;
+                            } | null;
+                            /**
+                             * Format: uuid
+                             * @description Unique identifier for this build.
+                             */
+                            id: string;
+                            /**
+                             * Format: date-time
+                             * @description When this build was created.
+                             */
+                            createdAt: string;
+                            /** @description Upstream CI status for this commit. Null when CI data is unavailable. */
+                            ci: {
+                                /**
+                                 * @description `pass`: all gated checks green. `partial`: gated checks green, others failed. `fail`: gated checks failed. `unknown`: CI data unavailable.
+                                 * @enum {string}
+                                 */
+                                status: "pass" | "partial" | "fail" | "unknown";
+                                checks: {
+                                    total: number;
+                                    passed: number;
+                                    failed: number;
+                                };
+                                /** @description Names of the checks that did not succeed, as GitHub reports them. */
+                                failures: string[];
+                                /** @description Glob patterns of the checks that gate a build. */
+                                gatedOn: string[];
+                                /**
+                                 * Format: date-time
+                                 * @description When CI state was fetched from GitHub.
+                                 */
+                                retrievedAt: string;
+                            } | null;
+                            /** @description Bundled profiles for this build. See https://docs.simmit.com/api/bundled-profiles. */
+                            profiles: {
+                                /** @description Profile filenames this build accepts (e.g. `MID1_Mage_Arcane.simc`). Reference one on its own line or as `input=<filename>`. */
+                                manifest: string[];
+                            } | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Your API key is missing, invalid, or not allowed. See `code`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @enum {string} */
+                        code: "missing_token" | "invalid_token" | "revoked_token" | "expired_token";
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+        };
+    };
+    simcForeverGetBuild: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Build ID, from `build.id` on a job response. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Full SimC Forever build details. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Git branch this build was produced from. */
+                        gitBranch: string;
+                        /** @description Source repository for this SimC build. */
+                        repo: string;
+                        /** @description Git commit of the SimC source for this build. */
+                        commit: string;
+                        /** @description SimC version (e.g. `1205-01`). Null when not recorded. */
+                        simcVersion: string | null;
+                        /** @description Live and PTR WoW versions this build simulates. Null when not recorded. */
+                        gameData: {
+                            live: {
+                                /** @description Live WoW game version (e.g. `12.0.7.68453`). */
+                                version: string;
+                                /** @description Hotfix date of the live game data (`YYYY-MM-DD`). */
+                                hotfixDate: string;
+                            };
+                            /** @description Null if this build has no PTR data. */
+                            ptr: {
+                                /** @description PTR WoW game version (e.g. `12.1.0.68569`). */
+                                version: string;
+                                /** @description Hotfix date of the PTR game data (`YYYY-MM-DD`). */
+                                hotfixDate: string;
+                            } | null;
+                        } | null;
+                        /**
+                         * Format: uuid
+                         * @description Unique identifier for this build.
+                         */
+                        id: string;
+                        /**
+                         * Format: date-time
+                         * @description When this build was created.
+                         */
+                        createdAt: string;
+                        /** @description Upstream CI status for this commit. Null when CI data is unavailable. */
+                        ci: {
+                            /**
+                             * @description `pass`: all gated checks green. `partial`: gated checks green, others failed. `fail`: gated checks failed. `unknown`: CI data unavailable.
+                             * @enum {string}
+                             */
+                            status: "pass" | "partial" | "fail" | "unknown";
+                            checks: {
+                                total: number;
+                                passed: number;
+                                failed: number;
+                            };
+                            /** @description Names of the checks that did not succeed, as GitHub reports them. */
+                            failures: string[];
+                            /** @description Glob patterns of the checks that gate a build. */
+                            gatedOn: string[];
+                            /**
+                             * Format: date-time
+                             * @description When CI state was fetched from GitHub.
+                             */
+                            retrievedAt: string;
+                        } | null;
+                        /** @description Bundled profiles for this build. See https://docs.simmit.com/api/bundled-profiles. */
+                        profiles: {
+                            /** @description Profile filenames this build accepts (e.g. `MID1_Mage_Arcane.simc`). Reference one on its own line or as `input=<filename>`. */
+                            manifest: string[];
+                        } | null;
+                    };
+                };
+            };
+            /** @description Invalid build ID format (must be a UUID). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        code: string;
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description Your API key is missing, invalid, or not allowed. See `code`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @enum {string} */
+                        code: "missing_token" | "invalid_token" | "revoked_token" | "expired_token";
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description Build not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        code: string;
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+        };
+    };
+    simcForeverGetJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Full SimC Forever job record. */
+            200: {
+                headers: {
+                    /** @description Your jobs in flight. */
+                    "X-Active-Jobs": string;
+                    /** @description Your limit on jobs in flight. */
+                    "X-Max-Active-Jobs": string;
+                    /** @description Request ID, also in error bodies as `requestId`. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        /** @enum {string} */
+                        status: "pending" | "queued" | "starting" | "running" | "completed" | "failed" | "cancelled" | "timed_out";
+                        /**
+                         * @description The priority your job runs at: `requestedPriority`, capped at `plan.maxPriority`, and `standard` when `workload` is `economy`.
+                         * @enum {string}
+                         */
+                        priority: "background" | "standard" | "high";
+                        /**
+                         * @description The priority you asked for, or `plan.defaultPriority` when you set none.
+                         * @enum {string}
+                         */
+                        requestedPriority: "background" | "standard" | "high";
+                        /**
+                         * @description The workload your job runs as. An `interactive` request runs as `economy`, at reduced speed, once your daily full-speed time is used, unless credits keep it at full speed.
+                         * @enum {string}
+                         */
+                        workload: "interactive" | "batch" | "economy";
+                        /**
+                         * @description The workload you asked for. Differs from `workload` when your job was moved to `economy`.
+                         * @enum {string}
+                         */
+                        requestedWorkload: "interactive" | "batch" | "economy";
+                        /** Format: date-time */
+                        createdAt: string | null;
+                        /**
+                         * Format: date-time
+                         * @description When this job started running. Null before it starts.
+                         */
+                        startedAt: string | null;
+                        /** Format: date-time */
+                        completedAt: string | null;
+                        /**
+                         * Format: date-time
+                         * @description When a cancel was requested. Null when none was.
+                         */
+                        cancelRequestedAt: string | null;
+                        /** @enum {string|null} */
+                        errorCode: "execution_interrupted" | "execution_timeout" | "max_credits_reached" | "credits_exhausted" | "execution_failed" | "build_unavailable" | "simulation_error" | "queue_timeout" | "input_invalid" | "insufficient_credits" | "user_cancelled" | "internal" | null;
+                        /** @description Explanation of `errorCode`. */
+                        statusReason: string | null;
+                        /** @description SimC process exit code. */
+                        simcExitCode: string | null;
+                        /** @description Days artifacts are kept after `completedAt`. After that, artifact endpoints return `410`. */
+                        retentionDays: number | null;
+                        /** @description Your metadata, exactly as submitted. */
+                        metadata: {
+                            [key: string]: unknown;
+                        } | null;
+                        runtime: {
+                            /** @description SimC run time in milliseconds, excluding setup and teardown. Null if the job has not completed or the sim did not start. */
+                            simDurationMs: number | null;
+                            /** @description Time from job start to completion in milliseconds, including artifact generation. Null when the job has not run. */
+                            totalDurationMs: number | null;
+                            /** @description Credits this job used, including any priority fee. `0` when nothing was billable. Null until the job is terminal. */
+                            creditsConsumed: number | null;
+                            /** @description Priority fee in credits, included in `creditsConsumed`. `0` when no fee applied. */
+                            priorityFeeCredits: number;
+                            /** @description Credits per second of SimC run time. `creditsConsumed` is this rate times `simDurationMs` rounded up to whole seconds, plus `priorityFeeCredits`. Null until the job is assigned to a machine. */
+                            creditsPerSecond: number | null;
+                            /** @description vCPUs of the machine this job ran on. Null before it runs. */
+                            vcpus: number | null;
+                            ceiling: {
+                                /** @description Credits at which this job is stopped with `errorCode` `max_credits_reached`: your `runtime.maxCredits`, or `plan.maxCreditsPerJob` when you set none. */
+                                maxCredits: number | null;
+                                /** @description Seconds this job may wait in the queue before it is cancelled with `errorCode` `queue_timeout`. */
+                                queueSeconds: number | null;
+                            };
+                            /** @description Variants your sim runs: its profilesets, `copy=` and `set=` actors, or 1 when it has none. Null when not recorded. */
+                            variants: number | null;
+                            /** @description Your sim's size, checked against `plan.maxIterationsPerJob`: `variants`, plus your base profile when it has profilesets, `copy=` or `set=` actors, times the iterations each is counted at. That is your input's `iterations=`, at most 1,000,000; without it, by the `target_error` your sim runs at, yours or SimC's default: 100,000 below 0.1, 25,000 from 0.1 to 0.2, 5,000 above 0.2. Multistage sims count 5,000. Null when not recorded. */
+                            iterations: number | null;
+                        };
+                        /** @description True if this job was retried automatically after a platform error. The response reflects the latest attempt. */
+                        retried: boolean;
+                        build: {
+                            /**
+                             * Format: uuid
+                             * @description Build ID. `GET /v1/simc-forever/builds/{id}` returns the build.
+                             */
+                            id: string;
+                            /** @enum {string} */
+                            channel: "nightly" | "weekly" | "latest";
+                            /** @description Git commit of the SimC source for this build. */
+                            commit: string;
+                            /** @description Upstream CI summary for this commit; `GET /v1/simc-forever/builds/{id}` has each check. Null when CI data is unavailable. */
+                            ci: {
+                                /**
+                                 * @description CI status for the build commit.
+                                 * @enum {string}
+                                 */
+                                status: "pass" | "partial" | "fail" | "unknown";
+                                /** @description CI checks that did not succeed. `GET /v1/simc-forever/builds` names them. */
+                                failed: number;
+                            } | null;
+                        } | null;
+                        links: components["schemas"]["SimcForeverJobLinks"];
+                    };
+                };
+            };
+            /** @description Your API key is missing, invalid, or not allowed. See `code`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @enum {string} */
+                        code: "missing_token" | "invalid_token" | "revoked_token" | "expired_token";
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description Job not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        code: string;
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+        };
+    };
+    simcForeverGetJobResult: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Full result payload for a finished job. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        /** @enum {string} */
+                        status: "completed" | "failed" | "cancelled" | "timed_out";
+                        /**
+                         * @description The priority your job runs at: `requestedPriority`, capped at `plan.maxPriority`, and `standard` when `workload` is `economy`.
+                         * @enum {string}
+                         */
+                        priority: "background" | "standard" | "high";
+                        /**
+                         * @description The priority you asked for, or `plan.defaultPriority` when you set none.
+                         * @enum {string}
+                         */
+                        requestedPriority: "background" | "standard" | "high";
+                        /**
+                         * @description The workload your job runs as. An `interactive` request runs as `economy`, at reduced speed, once your daily full-speed time is used, unless credits keep it at full speed.
+                         * @enum {string}
+                         */
+                        workload: "interactive" | "batch" | "economy";
+                        /**
+                         * @description The workload you asked for. Differs from `workload` when your job was moved to `economy`.
+                         * @enum {string}
+                         */
+                        requestedWorkload: "interactive" | "batch" | "economy";
+                        /** Format: date-time */
+                        createdAt: string | null;
+                        /**
+                         * Format: date-time
+                         * @description When this job started running. Null before it starts.
+                         */
+                        startedAt: string | null;
+                        /** Format: date-time */
+                        completedAt: string | null;
+                        /**
+                         * Format: date-time
+                         * @description When a cancel was requested. Null when none was.
+                         */
+                        cancelRequestedAt: string | null;
+                        /** @enum {string|null} */
+                        errorCode: "execution_interrupted" | "execution_timeout" | "max_credits_reached" | "credits_exhausted" | "execution_failed" | "build_unavailable" | "simulation_error" | "queue_timeout" | "input_invalid" | "insufficient_credits" | "user_cancelled" | "internal" | null;
+                        /** @description Explanation of `errorCode`. */
+                        statusReason: string | null;
+                        /** @description SimC process exit code. */
+                        simcExitCode: string | null;
+                        /** @description Days artifacts are kept after `completedAt`. After that, artifact endpoints return `410`. */
+                        retentionDays: number | null;
+                        /** @description Your metadata, exactly as submitted. */
+                        metadata: {
+                            [key: string]: unknown;
+                        } | null;
+                        runtime: {
+                            /** @description SimC run time in milliseconds, excluding setup and teardown. Null if the job has not completed or the sim did not start. */
+                            simDurationMs: number | null;
+                            /** @description Time from job start to completion in milliseconds, including artifact generation. Null when the job has not run. */
+                            totalDurationMs: number | null;
+                            /** @description Credits this job used, including any priority fee. `0` when nothing was billable. Null until the job is terminal. */
+                            creditsConsumed: number | null;
+                            /** @description Priority fee in credits, included in `creditsConsumed`. `0` when no fee applied. */
+                            priorityFeeCredits: number;
+                            /** @description Credits per second of SimC run time. `creditsConsumed` is this rate times `simDurationMs` rounded up to whole seconds, plus `priorityFeeCredits`. Null until the job is assigned to a machine. */
+                            creditsPerSecond: number | null;
+                            /** @description vCPUs of the machine this job ran on. Null before it runs. */
+                            vcpus: number | null;
+                            ceiling: {
+                                /** @description Credits at which this job is stopped with `errorCode` `max_credits_reached`: your `runtime.maxCredits`, or `plan.maxCreditsPerJob` when you set none. */
+                                maxCredits: number | null;
+                                /** @description Seconds this job may wait in the queue before it is cancelled with `errorCode` `queue_timeout`. */
+                                queueSeconds: number | null;
+                            };
+                            /** @description Variants your sim runs: its profilesets, `copy=` and `set=` actors, or 1 when it has none. Null when not recorded. */
+                            variants: number | null;
+                            /** @description Your sim's size, checked against `plan.maxIterationsPerJob`: `variants`, plus your base profile when it has profilesets, `copy=` or `set=` actors, times the iterations each is counted at. That is your input's `iterations=`, at most 1,000,000; without it, by the `target_error` your sim runs at, yours or SimC's default: 100,000 below 0.1, 25,000 from 0.1 to 0.2, 5,000 above 0.2. Multistage sims count 5,000. Null when not recorded. */
+                            iterations: number | null;
+                        };
+                        /** @description True if this job was retried automatically after a platform error. The response reflects the latest attempt. */
+                        retried: boolean;
+                        build: {
+                            /**
+                             * Format: uuid
+                             * @description Build ID. `GET /v1/simc-forever/builds/{id}` returns the build.
+                             */
+                            id: string;
+                            /** @enum {string} */
+                            channel: "nightly" | "weekly" | "latest";
+                            /** @description Git commit of the SimC source for this build. */
+                            commit: string;
+                            /** @description Upstream CI summary for this commit; `GET /v1/simc-forever/builds/{id}` has each check. Null when CI data is unavailable. */
+                            ci: {
+                                /**
+                                 * @description CI status for the build commit.
+                                 * @enum {string}
+                                 */
+                                status: "pass" | "partial" | "fail" | "unknown";
+                                /** @description CI checks that did not succeed. `GET /v1/simc-forever/builds` names them. */
+                                failed: number;
+                            } | null;
+                        } | null;
+                        links: components["schemas"]["SimcForeverJobLinks"];
+                        result: {
+                            summary: {
+                                /**
+                                 * @description What `mean` and `mean_error` measure and profilesets are ranked by. `dps`: the main actor's damage. `raid_dps`: the group's combined damage, when your input sets `profileset_metric=raid_dps`; `mainActor.mean` is then the group total.
+                                 * @enum {string}
+                                 */
+                                metric: "dps" | "raid_dps";
+                                /** @description The headline actor, chosen by SimC's `profileset_main_actor_index` (default `0`). */
+                                mainActor: {
+                                    /** @description Actor name as defined in your profile. */
+                                    name: string;
+                                    /** @description Mean DPS across all iterations. */
+                                    mean: number;
+                                    /** @description The ± DPS error on `mean`: half the width of its 95% confidence interval (`mean_stddev` × 1.96). */
+                                    mean_error: number;
+                                    /** @description Standard error of the mean DPS. */
+                                    mean_stddev: number;
+                                    /** @description Standard deviation of DPS across iterations. */
+                                    stddev?: number;
+                                    /** @description Lowest single-iteration DPS. */
+                                    min?: number;
+                                    /** @description Highest single-iteration DPS. */
+                                    max?: number;
+                                    /** @description Profileset results. Omitted when there are none. */
+                                    profilesets?: {
+                                        /** @description Profilesets in the sim. `results` holds at most the top 200 by DPS; the `profileset_results` artifact has them all. */
+                                        count: number;
+                                        /** @description Profilesets ranked by DPS, highest first; at most the top 200. */
+                                        results: {
+                                            /** @description Profileset name as defined in your input. */
+                                            name: string;
+                                            /** @description Mean DPS across all iterations. */
+                                            mean: number;
+                                            /** @description The ± DPS error on `mean`: half the width of its 95% confidence interval (`mean_stddev` × 1.96). */
+                                            mean_error: number;
+                                            /** @description Standard error of the mean DPS. */
+                                            mean_stddev: number;
+                                            /** @description Standard deviation of DPS across iterations. */
+                                            stddev?: number;
+                                            /** @description Lowest single-iteration DPS. */
+                                            min?: number;
+                                            /** @description Highest single-iteration DPS. */
+                                            max?: number;
+                                            /** @description The highest stage this profileset reached; earlier stages carry a larger `mean_error`. `1` for single-pass runs. */
+                                            stage: number;
+                                        }[];
+                                    };
+                                } | null;
+                                /** @description The headline actor's talents, as an in-game export string. Omitted when the run produced no report. */
+                                talents?: string;
+                                /** @description The headline actor's equipped items, in the report's slot order. Omitted when the run produced no report. */
+                                gear?: {
+                                    /** @description SimC slot name (`head`, `neck`, …, `main_hand`, `off_hand`). */
+                                    slot: string;
+                                    /** @description The item id. */
+                                    id: number;
+                                    /** @description SimC's snake_case item name. */
+                                    name: string;
+                                    /** @description Item level the item was simulated at. */
+                                    ilevel?: number;
+                                    /** @description Bonus ids applied to the item. */
+                                    bonusIds?: number[];
+                                    /** @description Item ids of socketed gems. */
+                                    gemIds?: number[];
+                                    /** @description The item's enchant id. */
+                                    enchantId?: number;
+                                    /** @description A crafted item's chosen stat ids. */
+                                    craftedStatIds?: number[];
+                                }[];
+                                /** @description Per-actor results for a `copy=` comparison, baseline included. Omitted for other runs. */
+                                actors?: {
+                                    /** @description Actors in the comparison. `results` holds at most the top 200 by DPS; the `actor_results` artifact has them all. */
+                                    count: number;
+                                    /** @description Actors ranked by DPS, highest first; at most the top 200. */
+                                    results: {
+                                        /** @description Actor name as defined in your profile. */
+                                        name: string;
+                                        /** @description Mean DPS across all iterations. */
+                                        mean: number;
+                                        /** @description The ± DPS error on `mean`: half the width of its 95% confidence interval (`mean_stddev` × 1.96). */
+                                        mean_error: number;
+                                        /** @description Standard error of the mean DPS. */
+                                        mean_stddev: number;
+                                        /** @description Standard deviation of DPS across iterations. */
+                                        stddev?: number;
+                                        /** @description Lowest single-iteration DPS. */
+                                        min?: number;
+                                        /** @description Highest single-iteration DPS. */
+                                        max?: number;
+                                    }[];
+                                };
+                                /** @description Iterations per actor. Omitted for multistage runs. */
+                                iterations?: number;
+                                /** @description Multistage execution metadata. */
+                                multiStage: {
+                                    /** @description Whether multistage execution ran. */
+                                    enabled: boolean;
+                                    /**
+                                     * @description Why multistage execution did or did not run.
+                                     * @enum {string}
+                                     */
+                                    reason: "disabled_by_option" | "unsupported_stage_sensitive_directive" | "unsupported_copy_set_only" | "unsupported_mixed_profileset_copy_set" | "no_variants_in_input" | "unsupported_multi_actor" | "no_profileset_candidates" | "below_min_candidates" | "eligible_profileset_only";
+                                    /** @description Stages in the order they ran. Empty for single-pass runs. */
+                                    stages: {
+                                        /** @description Stage number (1-indexed). */
+                                        stage: number;
+                                        /** @description Stage name (`initial`, `intermediate`, `final`). */
+                                        label: string;
+                                        /** @description Profilesets run in this stage. */
+                                        profilesets: number;
+                                        /** @description Profilesets dropped at the end of this stage. `0` for the last stage run. */
+                                        culled: number;
+                                        /** @description Iterations this stage's profilesets ran, summed. Excludes the headline actor's. */
+                                        iterations?: number;
+                                        /** @description The `target_error` this stage ran at. */
+                                        targetError?: number;
+                                    }[];
+                                };
+                            } | null;
+                            artifacts: {
+                                id: string;
+                                /**
+                                 * Format: uri
+                                 * @description Public download URL, valid for the job's retention window.
+                                 */
+                                url: string;
+                                /**
+                                 * @description `html_report`: HTML report. `json_report`: JSON results. `csv_report`: DPS table (`result.csv`), one row per actor then one per profileset. `profileset_results`: every profileset (`profilesets.json`), in the summary's row shape; present when a sweep produced results. `actor_results`: every actor of a `copy=`/`set=` comparison (`actors.json`), in the row shape of the summary's `actors`. `input`: the SimC input your job ran. `stdout_log` / `stderr_log`: SimC logs; consecutive duplicate `stderr_log` lines are collapsed with a repeat count. Multistage runs repeat the html and json artifacts once per stage; tell them apart by `stage`.
+                                 * @enum {string}
+                                 */
+                                kind: "html_report" | "json_report" | "csv_report" | "profileset_results" | "actor_results" | "input" | "stdout_log" | "stderr_log";
+                                /**
+                                 * @description MIME type of the artifact.
+                                 * @enum {string}
+                                 */
+                                mimeType: "application/json" | "text/html" | "text/csv" | "text/plain";
+                                /** @description Stage this artifact belongs to (1-indexed). Null for single-pass jobs and artifacts not tied to a stage. */
+                                stage: number | null;
+                            }[];
+                        };
+                    };
+                };
+            };
+            /** @description Your API key is missing, invalid, or not allowed. See `code`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @enum {string} */
+                        code: "missing_token" | "invalid_token" | "revoked_token" | "expired_token";
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description Job not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        code: string;
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description The job is not terminal yet. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @enum {string} */
+                        code: "result_not_ready";
+                        meta: {
+                            /** @enum {string} */
+                            status: "pending" | "queued" | "starting" | "running";
+                        };
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description The job is terminal but produced no result. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @enum {string} */
+                        code: "result_unavailable";
+                        meta: {
+                            /** @enum {string} */
+                            status: "completed" | "failed" | "cancelled" | "timed_out";
+                        };
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+        };
+    };
+    simcForeverGetJobProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The SimC profile text you submitted with the job. */
+            200: {
+                headers: {
+                    /** @description Your jobs in flight. */
+                    "X-Active-Jobs": string;
+                    /** @description Your limit on jobs in flight. */
+                    "X-Max-Active-Jobs": string;
+                    /** @description Request ID, also in error bodies as `requestId`. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description The SimC profile text you submitted. Null if none is stored. */
+                        text: string | null;
+                    };
+                };
+            };
+            /** @description Your API key is missing, invalid, or not allowed. See `code`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @enum {string} */
+                        code: "missing_token" | "invalid_token" | "revoked_token" | "expired_token";
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description Job not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        code: string;
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+        };
+    };
+    simcForeverGetJobStatus: {
+        parameters: {
+            query?: {
+                /** @description Comma-separated optional fields to include. Supported: `logEntries`. */
+                include?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current status, queue position, and progress for the job. */
+            200: {
+                headers: {
+                    /** @description Your jobs in flight. */
+                    "X-Active-Jobs": string;
+                    /** @description Your limit on jobs in flight. */
+                    "X-Max-Active-Jobs": string;
+                    /** @description Request ID, also in error bodies as `requestId`. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * @description Terminal values: `completed`, `failed`, `cancelled`, `timed_out`.
+                         * @enum {string}
+                         */
+                        status: "pending" | "queued" | "starting" | "running" | "completed" | "failed" | "cancelled" | "timed_out";
+                        /**
+                         * @description The priority your job runs at: `requestedPriority`, capped at `plan.maxPriority`, and `standard` when `workload` is `economy`.
+                         * @enum {string}
+                         */
+                        priority: "background" | "standard" | "high";
+                        /**
+                         * @description The priority you asked for, or `plan.defaultPriority` when you set none.
+                         * @enum {string}
+                         */
+                        requestedPriority: "background" | "standard" | "high";
+                        /**
+                         * @description The workload your job runs as. An `interactive` request runs as `economy`, at reduced speed, once your daily full-speed time is used, unless credits keep it at full speed.
+                         * @enum {string}
+                         */
+                        workload: "interactive" | "batch" | "economy";
+                        /**
+                         * @description The workload you asked for. Differs from `workload` when your job was moved to `economy`.
+                         * @enum {string}
+                         */
+                        requestedWorkload: "interactive" | "batch" | "economy";
+                        /**
+                         * @description Why the job ended. Null when the job is not terminal or completed successfully.
+                         * @enum {string|null}
+                         */
+                        errorCode: "execution_interrupted" | "execution_timeout" | "max_credits_reached" | "credits_exhausted" | "execution_failed" | "build_unavailable" | "simulation_error" | "queue_timeout" | "input_invalid" | "insufficient_credits" | "user_cancelled" | "internal" | null;
+                        /** @description Explanation of `errorCode`. Null when the job is not terminal or there is no detail. */
+                        statusReason: string | null;
+                        /** @description SimC process exit code. Null when the job is not terminal. */
+                        simcExitCode: string | null;
+                        queue: {
+                            /**
+                             * Format: date-time
+                             * @description When this job entered the queue. For a retried job, when the current attempt did.
+                             */
+                            queuedAt: string;
+                            /** @description Estimated seconds until this job starts; not a guarantee. Null when there is no estimate, and always when `workload` is `economy`. */
+                            estimatedStartSeconds: number | null;
+                            /**
+                             * Format: date-time
+                             * @description When the estimate was last refreshed. Null when there is no estimate, and always when `workload` is `economy`.
+                             */
+                            estimatedStartUpdatedAt: string | null;
+                        } | null;
+                        progress: {
+                            /** @description Estimated percent complete (0–100). Null before the job runs. */
+                            percent: number | null;
+                            /** @description Null before the job starts and once it is terminal. Single-pass jobs report `{ current: 1, total: 1, label: "initial" }`. */
+                            stage: {
+                                /** @description Current stage (1-indexed). */
+                                current: number;
+                                /** @description Stages in this run. */
+                                total: number;
+                                /** @description Name of the current stage, for example `initial` or `final`. */
+                                label: string;
+                                /** @description Estimated percent complete (0–100) of the current stage. */
+                                percent: number;
+                            } | null;
+                        };
+                        /** @description Recent SimC log lines while the job is running. Null when not running or not requested with `include=logEntries`. Full logs are artifacts once the job ends. */
+                        logEntries: {
+                            /**
+                             * @description `stderr` carries SimC warnings, errors and notes; `stdout` carries sim output and progress.
+                             * @enum {string}
+                             */
+                            source: "stdout" | "stderr";
+                            /** @description The log line text. */
+                            message: string;
+                            /** @description When the line was captured, in epoch milliseconds. */
+                            ts: number;
+                        }[] | null;
+                        /**
+                         * Format: date-time
+                         * @description When this job started running. Null before it starts.
+                         */
+                        startedAt: string | null;
+                        /** Format: date-time */
+                        updatedAt: string | null;
+                        /** @description True if this job was retried automatically after a platform error. The response reflects the latest attempt. */
+                        retried: boolean;
+                    };
+                };
+            };
+            /** @description Your API key is missing, invalid, or not allowed. See `code`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @enum {string} */
+                        code: "missing_token" | "invalid_token" | "revoked_token" | "expired_token";
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description Job not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        code: string;
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+        };
+    };
+    simcForeverGetArtifactUrl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public download URL, valid for the artifact's retention window. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uri */
+                        url: string;
+                    };
+                };
+            };
+            /** @description Your API key is missing, invalid, or not allowed. See `code`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @enum {string} */
+                        code: "missing_token" | "invalid_token" | "revoked_token" | "expired_token";
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description Artifact not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        code: string;
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description The artifact has expired. */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        code: string;
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+        };
+    };
+    simcForeverCancelJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `status` is `cancelled` when the job had not started, or `cancel_requested` when it was running and has been signaled to stop. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        id: string;
+                        /**
+                         * @description The job ended before it started running.
+                         * @enum {string}
+                         */
+                        status: "cancelled";
+                    } | {
+                        /** @enum {boolean} */
+                        success: true;
+                        id: string;
+                        /**
+                         * @description The job was running and has been signaled to stop. Poll `GET /v1/simc-forever/jobs/{id}` until it is `cancelled`.
+                         * @enum {string}
+                         */
+                        status: "cancel_requested";
+                        /**
+                         * Format: date-time
+                         * @description When the cancel was requested.
+                         */
+                        cancelRequestedAt: string;
+                    };
+                };
+            };
+            /** @description Your API key is missing, invalid, or not allowed. See `code`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @enum {string} */
+                        code: "missing_token" | "invalid_token" | "revoked_token" | "expired_token";
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description Job not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        code: string;
+                        meta: {
+                            [key: string]: (string | number | boolean) | (string | number | boolean)[] | {
+                                [key: string]: string | number | boolean | null;
+                            }[] | null;
+                        } | null;
+                        /**
+                         * @description Request ID, also sent as the `X-Request-Id` header.
+                         * @example req_4f9a2c1e8b7d4f0a9c3e5d6b7a8f1e2d
+                         */
+                        requestId?: string;
+                    };
+                };
+            };
+            /** @description Job has already reached a terminal status. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @enum {string} */
+                        code: "job_not_cancellable";
+                        meta: {
+                            id: string;
+                            /** @enum {string} */
+                            status: "pending" | "queued" | "starting" | "running" | "completed" | "failed" | "cancelled" | "timed_out";
+                        };
                     };
                 };
             };

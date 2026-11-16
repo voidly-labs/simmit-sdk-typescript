@@ -14,9 +14,11 @@ export class Profiles {
   /**
    * Check SimC profile text against the rules `jobs.create` applies, without
    * creating a job or using credits. Resolves with any input `warnings`; a
-   * rejection throws the same `InvalidProfileError` / `TooManyVariantsError` a
-   * submission would. A partial profile works too. A repeat check has no side
-   * effects, so no idempotency key is sent.
+   * rejection throws the same `InvalidProfileError` / `TooManyVariantsError` /
+   * `IterationsExceedsPolicyError` a submission would. Set `runtime.multiStage`
+   * to match the submission so the profile is sized and warned the same way.
+   * A partial profile works too. A repeat check has no side effects, so no
+   * idempotency key is sent.
    */
   check(
     params: ProfileCheckParams,

@@ -80,8 +80,8 @@ await client.jobs.cancel(id) // request cancellation
 
 `profiles.check` runs profile text through the checks `jobs.create` applies,
 without creating a job or using credits. A rejection throws the same
-`InvalidProfileError` or `TooManyVariantsError` a submission would, and a
-passing profile returns any input warnings:
+`InvalidProfileError`, `TooManyVariantsError`, or `IterationsExceedsPolicyError`
+a submission would, and a passing profile returns any input warnings:
 
 ```ts
 const { warnings } = await client.profiles.check({
@@ -111,6 +111,7 @@ const balance = await client.credits.get()
 const usage = await client.usage.get()
 usage.plan.maxActiveJobs // the key's concurrency ceiling (number | null)
 usage.snapshot.activeJobs // jobs in flight right now (number | null)
+usage.budget?.remainingSeconds // daily full-speed time left (budget is null without a daily budget)
 ```
 
 ### Errors

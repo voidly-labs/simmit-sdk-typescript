@@ -156,6 +156,9 @@ export class APIError<
       if (code === 'too_many_variants') {
         return new TooManyVariantsError(422, body, message, headers)
       }
+      if (code === 'iterations_exceeds_policy') {
+        return new IterationsExceedsPolicyError(422, body, message, headers)
+      }
       if (code === 'build_pin_not_allowed') {
         return new BuildPinNotAllowedError(422, body, message, headers)
       }
@@ -291,6 +294,24 @@ export class TooManyVariantsError extends UnprocessableEntityError {
     /** Maximum simulated variants per sim the account allows. */
     maxVariants: number
     /** Account page where higher variant limits are available. */
+    upgradeUrl: string
+  }
+}
+
+export class IterationsExceedsPolicyError extends UnprocessableEntityError {
+  declare readonly code: 'iterations_exceeds_policy'
+  declare readonly meta: {
+    reason: 'iterations_exceeds_policy'
+    message: string
+    /** The sim's size, the number checked against `maxIterationsPerJob`. Counted as a job's `runtime.iterations` is. */
+    iterations: number
+    /** Variants the sim runs: its profilesets, `copy=` and `set=` actors, or 1 when it has none. */
+    variants: number
+    /** Iterations each profile is counted at. */
+    iterationsPerVariant: number
+    /** The account's `plan.maxIterationsPerJob`. */
+    maxIterationsPerJob: number
+    /** Account page where higher limits are available. */
     upgradeUrl: string
   }
 }
