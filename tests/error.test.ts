@@ -11,6 +11,7 @@ import {
   ConflictError,
   WorkloadNotAllowedError,
   IdempotencyKeyReuseError,
+  IterationsExceedsPolicyError,
   InsufficientCreditsError,
   InsufficientCreditsLiabilityError,
   InternalServerError,
@@ -97,6 +98,12 @@ describe('code subclass selection', () => {
     [422, 'too_many_variants', TooManyVariantsError, UnprocessableEntityError],
     [
       422,
+      'iterations_exceeds_policy',
+      IterationsExceedsPolicyError,
+      UnprocessableEntityError
+    ],
+    [
+      422,
       'build_pin_not_allowed',
       BuildPinNotAllowedError,
       UnprocessableEntityError
@@ -176,6 +183,25 @@ describe('typed meta', () => {
     expect(err.meta.totalVariants).toBe(5000)
     expect(err.meta.maxVariants).toBe(1000)
     expect(err.meta.upgradeUrl).toBe('https://simmit.com/account')
+  })
+
+  it('surfaces the sim size and limit on IterationsExceedsPolicyError', () => {
+    const err = generate(
+      422,
+      envelope('iterations_exceeds_policy', {
+        reason: 'iterations_exceeds_policy',
+        message: 'This sim is over your limit of 300,000 iterations per sim.',
+        iterations: 4_010_000,
+        variants: 400,
+        iterationsPerVariant: 10_000,
+        maxIterationsPerJob: 300_000,
+        upgradeUrl: 'https://simmit.com/account'
+      })
+    ) as IterationsExceedsPolicyError
+    expect(err.meta.iterations).toBe(4_010_000)
+    expect(err.meta.variants).toBe(400)
+    expect(err.meta.iterationsPerVariant).toBe(10_000)
+    expect(err.meta.maxIterationsPerJob).toBe(300_000)
   })
 
   it('surfaces buildId and maxPinAgeDays on build-pin errors', () => {
